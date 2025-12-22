@@ -1,0 +1,31 @@
+fn start_server() {
+    let port = 3000;
+    print("Starting HTTP Server on port " + port);
+    
+    let server = argon_listen(port);
+    if (server < 0) {
+        print("Failed to bind port.");
+        return 0;
+    }
+    
+    print("Ready to accept connections...");
+    
+    while (1) {
+        let client = argon_accept(server);
+        if (client != -1) {
+            let req = argon_socket_read(client);
+            // print(req); // Optional debug
+            
+            let body = "Hello form Argon Native Server!";
+            let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n" + body;
+            
+            argon_socket_write(client, resp);
+            argon_socket_close(client);
+        }
+    }
+    return 0;
+}
+
+fn main() {
+    start_server();
+}

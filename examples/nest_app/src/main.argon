@@ -1,4 +1,0 @@
-fn main() {
-    print("App: Bootstrapping...");
-    UserController_index();
-}
