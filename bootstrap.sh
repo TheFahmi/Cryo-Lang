@@ -20,7 +20,7 @@ rm -f self-host/compiler.ll self-host/compiler.argon.ll compiler_stage0.ll
 
 # Use the interpreter to compile the compiler source code
 echo "Running: ./argon --emit-llvm self-host/compiler.argon"
-./argon --emit-llvm self-host/compiler.argon > compiler_stage0.ll
+./argon --emit-llvm self-host/compiler.ar > compiler_stage0.ll
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

@@ -1,13 +1,13 @@
 #!/bin/bash
 # Wrapper for Argon Compiler via Docker
-# Usage: ./ar [build|run] <file.ar> [--unsafe-math]
+# Usage: ./argon [build|run] <file.ar> [--unsafe-math]
 
 COMMAND=$1
 FILE=$2
 FLAG=$3
 
 if [ -z "$COMMAND" ]; then
-    echo "Usage: ./ar [new|build|run] <file_or_project>"
+    echo "Usage: ./argon [new|build|run] <file_or_project>"
     exit 1
 fi
 
@@ -16,7 +16,7 @@ if [ "$COMMAND" == "new" ]; then
     PROJECT_NAME=$FILE
     if [ -z "$PROJECT_NAME" ]; then
         echo "Error: Please specify project name."
-        echo "Usage: ./ar new <project_name>"
+        echo "Usage: ./argon new <project_name>"
         exit 1
     fi
     
