@@ -1,0 +1,21 @@
+// http_demo.argon
+// Demo: Making HTTP Requests
+
+fn main() {
+    print("Making Request to JSONPlaceholder...");
+    
+    // Simple GET Request
+    // get(url) is now a built-in function!
+    const response: string = get("https://jsonplaceholder.typicode.com/todos/1");
+    
+    print("\n--- Response ---");
+    print(response);
+    print("--- End Response ---\n");
+    
+    // Parsing JSON output (manual parsing for now, or just verification)
+    if (response != "") {
+        print("Successfully fetched TODO item!");
+    } else {
+        print("Failed to fetch data.");
+    }
+}

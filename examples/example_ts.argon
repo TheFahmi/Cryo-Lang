@@ -1,0 +1,44 @@
+// example_ts.argon
+// TypeScript-like Argon syntax
+
+// Type annotations like TypeScript
+const PI: f64 = 3.14159;
+let counter: i64 = 0;
+
+// Interface (like TypeScript)
+interface User {
+    id: i64;
+    name: string;
+    age: i64;
+}
+
+// Function with typed parameters (TypeScript style)
+fn greet(user: User): string {
+    return "Hello, " + user.name;
+}
+
+// Arrow function (like TypeScript)
+const add = (a: i64, b: i64): i64 => a + b;
+
+// Main function
+fn main() {
+    const x: i64 = 42;
+    let y: i64 = 100;
+    
+    const sum: i64 = add(x, y);
+    print(sum);
+    
+    // Region (Argon special - memory safety)
+    region temp {
+        let data: i64 = 999;
+        print(data);
+    }
+    
+    // Array (like TypeScript)
+    let numbers: i64[] = [1, 2, 3, 4, 5];
+    
+    // For-of loop (like TypeScript)
+    for (const n of numbers) {
+        print(n);
+    }
+}

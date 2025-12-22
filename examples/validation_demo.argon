@@ -1,0 +1,32 @@
+// validation_demo.argon
+// Demo Runtime Type Validation
+
+interface User {
+    name: string;
+    age: number;
+}
+
+fn main() {
+    print("--- Validation Demo ---");
+    
+    // 1. Valid assignments
+    let n: number = 100;
+    let s: string = "Hello";
+    
+    let u: User = { 
+        name: "Argon", 
+        age: 1 
+    };
+    print("Valid assignments passed.");
+    
+    // 2. Invalid assignment (Should error runtime)
+    print("Attempting invalid assignment (Variable 'fail')...");
+    
+    // This should throw: Type mismatch
+    let fail: User = { 
+        name: "Impostor", 
+        age: "Old"  // Error: age expects number, got string
+    }; 
+    
+    print("This line should NOT run.");
+}

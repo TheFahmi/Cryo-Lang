@@ -1,0 +1,39 @@
+// ts_structs.argon
+// Demo TypeScript Interfaces and Types
+
+// Interface definition
+interface User {
+    name: string;
+    age: number;
+    active: boolean;
+}
+
+// Type Alias
+type UserID = number;
+
+// Object Type Alias
+type ServerConfig = {
+    host: string;
+    port: number;
+};
+
+fn main() {
+    print("TypeScript definitions loaded.");
+    
+    // Usage (Type annotations are currently just for documentation/future validation)
+    let id: UserID = 101;
+    let user: User = {
+        name: "Admin",
+        age: 99,
+        active: true
+    };
+    
+    let config: ServerConfig = {
+        host: "localhost",
+        port: 8080
+    };
+    
+    print("User ID: " + id);
+    print("User Name: " + user.name);
+    console.log(config);
+}

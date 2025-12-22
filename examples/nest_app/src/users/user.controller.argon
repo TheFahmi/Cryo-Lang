@@ -1,0 +1,5 @@
+fn UserController_index() {
+    print("Controller: Request received");
+    let c = UserService_findAll();
+    print("Count: " + c);
+}

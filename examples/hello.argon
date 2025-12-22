@@ -1,0 +1,12 @@
+// hello.argon
+// Contoh program sederhana Argon
+
+fn main() {
+    print("Hello from Argon!");
+    
+    let x = 10;
+    let y = 20;
+    let z = x + y;
+    
+    print(z);
+}

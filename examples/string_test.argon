@@ -1,0 +1,35 @@
+fn main() {
+    let s = "Hello, Argon!";
+    
+    // Test len
+    print("Length:");
+    print(len(s));
+    print(s.len());
+    
+    // Test indexing
+    print("First char:");
+    print(s[0]);
+    
+    // Test charAt
+    print("Char at 7:");
+    print(s.charAt(7));
+    
+    // Test substring
+    print("Substring 0-5:");
+    print(s.substring(0, 5));
+    
+    // Test split
+    print("Split by comma:");
+    let parts = s.split(",");
+    print(parts[0]);
+    print(parts[1]);
+    
+    // Test trim
+    let padded = "  trimmed  ";
+    print("Trimmed:");
+    print(padded.trim());
+    
+    // String concatenation
+    let greeting = "Hello" + " " + "World";
+    print(greeting);
+}

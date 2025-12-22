@@ -1,0 +1,4 @@
+fn UserService_findAll() {
+    print("Service: Returning users...");
+    return 10;
+}

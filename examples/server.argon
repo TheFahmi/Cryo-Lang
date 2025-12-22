@@ -1,0 +1,32 @@
+// server.argon
+// A real backend web server in Argon
+
+// Global variables for request context (injected by interpreter)
+let REQUEST_METHOD: string = "";
+let REQUEST_URL: string = "";
+
+// Request Handler
+fn handle_request() {
+    print("Received: " + REQUEST_METHOD + " " + REQUEST_URL);
+    
+    // Simple Router
+    if (REQUEST_URL == "/") {
+        return "Hello from Argon Server!";
+    }
+    
+    if (REQUEST_URL == "/api/status") {
+        return "{ 'status': 'running', 'uptime': 100 }";
+    }
+    
+    if (REQUEST_URL == "/api/users") {
+        return "[ 'Alice', 'Bob', 'Charlie' ]";
+    }
+    
+    return "404 Not Found";
+}
+
+fn main() {
+    const port = 8000;
+    // serve() blocks forever
+    serve(port);
+}

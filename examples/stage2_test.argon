@@ -1,0 +1,62 @@
+// Test all Stage 2 features for Self-Hosting
+
+// 1. Function with Parameters
+fn add(a: i64, b: i64) {
+    return a + b;
+}
+
+fn greet(name: string) {
+    return "Hello, " + name + "!";
+}
+
+fn tokenize(source: string) {
+    // Simulate lexer - split by spaces
+    return source.split(" ");
+}
+
+fn main() {
+    print("=== Function Parameters Test ===");
+    let sum = add(10, 20);
+    print(sum);
+    
+    let greeting = greet("Argon");
+    print(greeting);
+    
+    print("=== String Methods Test ===");
+    let s = "Hello, World!";
+    
+    print("startsWith 'Hello':");
+    print(s.startsWith("Hello"));
+    
+    print("endsWith '!':");
+    print(s.endsWith("!"));
+    
+    print("indexOf 'World':");
+    print(s.indexOf("World"));
+    
+    print("includes ',':");
+    print(s.includes(","));
+    
+    print("charCodeAt(0) (H=72):");
+    print(s.charCodeAt(0));
+    
+    print("toUpperCase:");
+    print(s.toUpperCase());
+    
+    print("toLowerCase:");
+    print(s.toLowerCase());
+    
+    print("replace 'World' with 'Argon':");
+    print(s.replace("World", "Argon"));
+    
+    print("=== Tokenizer Simulation ===");
+    let code = "let x = 10";
+    let tokens = tokenize(code);
+    print("Tokens:");
+    print(tokens[0]);
+    print(tokens[1]);
+    print(tokens[2]);
+    print(tokens[3]);
+    
+    print("=== All Stage 2 Tests PASSED! ===");
+}

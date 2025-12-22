@@ -1,0 +1,42 @@
+// types_demo.argon
+// TypeScript-like Types and Values
+
+fn main() {
+    // Explicit type annotations
+    let age: number = 25;
+    let name: string = "Argon User";
+    let is_developer: boolean = true;
+    
+    print(name);
+    print(age);
+    
+    if (is_developer) {
+        print("Verified Developer!");
+    } else {
+        print("User");
+    }
+    
+    // Type inference works too
+    const score = 98.5;
+    print(score);
+    
+    // Arrays of different types
+    let data: number[] = [1, 2, 3];
+    let flags: boolean[] = [true, false, true];
+    
+    for (const val of data) {
+        print(val);
+    }
+    
+    // Null value
+    let nothing: any = null;
+    print(nothing);
+    
+    // String concat
+    let greeting = "Hello " + name;
+    print(greeting);
+    
+    // Arrow function syntax (implemented in lexer, works as assign for now)
+    // const add = (a, b) => a + b; 
+    // print(add(10, 20));
+}

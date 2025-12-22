@@ -1,0 +1,34 @@
+// benchmark.argon
+// Performance test for Argon region-based allocation
+
+fn main() {
+    print(100);
+    
+    // Simulate many allocations in a region
+    region batch {
+        let a = 1;
+        let b = 2;
+        let c = 3;
+        let d = 4;
+        let e = 5;
+        let f = 6;
+        let g = 7;
+        let h = 8;
+        let i = 9;
+        let j = 10;
+        
+        let sum = a + b + c + d + e + f + g + h + i + j;
+        print(sum);
+        
+        region nested {
+            let x = sum * 2;
+            let y = sum * 3;
+            print(x);
+            print(y);
+        }
+        
+        print(sum);
+    }
+    
+    print(999);
+}

@@ -1,0 +1,15 @@
+// curl.argon
+// A simple curl-like utility script
+
+fn main() {
+    // URL target (change this to your localhost:xxxx if needed)
+    const url: string = "https://jsonplaceholder.typicode.com/todos/1";
+
+    print("Fetching: " + url + " ...");
+    
+    // Perform GET request
+    const response: string = get(url);
+    
+    // Print Raw Response
+    print(response);
+}

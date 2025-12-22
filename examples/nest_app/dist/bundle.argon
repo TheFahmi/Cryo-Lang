@@ -1,0 +1,13 @@
+fn main() {
+    print("App: Bootstrapping...");
+    UserController_index();
+}
+fn UserController_index() {
+    print("Controller: Request received");
+    let c = UserService_findAll();
+    print("Count: " + c);
+}
+fn UserService_findAll() {
+    print("Service: Returning users...");
+    return 10;
+}

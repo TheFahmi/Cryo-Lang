@@ -1,0 +1,23 @@
+// ts_test.argon
+// Simple TypeScript-like syntax test
+
+fn main() {
+    // const is immutable
+    const x: i64 = 100;
+    
+    // let is mutable
+    let y: i64 = 200;
+    
+    print(x);
+    print(y);
+    print(x + y);
+    
+    // Array
+    const arr = [10, 20, 30];
+    print(arr);
+    
+    // For-of loop
+    for (const item of arr) {
+        print(item);
+    }
+}
