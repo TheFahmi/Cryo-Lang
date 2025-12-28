@@ -111,7 +111,7 @@ fi
 # 1. Compile (Build)
 # Mounts current dir to /src, compiles with argonc, links with clang
 docker run --rm -v "${HOST_PWD}:/src" -w //src argon-toolchain \
-    bash -c "argonc $FLAG $FILE && clang++ -O3 -flto -Wno-override-module ${FILE}.ll /usr/lib/libruntime_argon.a -o ${FILE}.out -lpthread -ldl"
+    bash -c "argonc $FLAG $FILE && clang++ -O0 -Wno-override-module ${FILE}.ll /usr/lib/libruntime_argon.a -o ${FILE}.out -lpthread -ldl"
 
 EXIT_CODE=$?
 

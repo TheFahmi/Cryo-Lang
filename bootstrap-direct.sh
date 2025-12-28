@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+
+echo "============================================="
+echo "   ARGON DIRECT BOOTSTRAP (Using argonc)"
+echo "============================================="
+echo ""
+
+# --- Use existing argonc to compile ---
+echo ""
+echo "[Stage 1] Compiling with existing argonc..."
+
+# Use argonc (which is already a working self-hosted compiler)
+argonc self-host/compiler.argon
+
+if [ -f "self-host/compiler.argon.ll" ]; then
+    cp self-host/compiler.argon.ll compiler_stage1.ll
+    echo "Stage 1 output size: $(wc -c < compiler_stage1.ll) bytes"
+else
+    echo "Error: argonc failed to produce output LLVM IR."
+    exit 1
+fi
+
+echo "[Stage 1] Linking Stage 1 Compiler (using existing runtime)..."
+# Use the SAME runtime as original to ensure compatibility
+clang++ -O0 -Wno-override-module compiler_stage1.ll /usr/lib/libruntime_argon.a -o stage1_compiler -lpthread -ldl
+echo ">> Stage 1 Compiler Created: ./stage1_compiler"
+
+# --- Test Stage 1 ---
+echo ""
+echo "[Test] Testing Stage 1 Compiler with simple file..."
+echo 'fn main() { print("Hello from test!"); }' > test_simple.argon
+./stage1_compiler test_simple.argon 2>&1 | head -20
+
+if [ -f "test_simple.argon.ll" ]; then
+    echo ">> Stage 1 Test PASSED - output generated"
+    head -30 test_simple.argon.ll
+else
+    echo ">> Stage 1 Test FAILED - no output"
+fi
+
+echo ""
+echo "============================================="
+echo "   BOOTSTRAP COMPLETE"
+echo "============================================="

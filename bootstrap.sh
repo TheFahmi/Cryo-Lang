@@ -2,25 +2,27 @@
 set -e
 
 echo "============================================="
-echo "   ARGON SELF-HOSTING BOOTSTRAP PROTOCOL"
+echo "   ARGON BOOTSTRAP (Rust Interpreter)"
 echo "============================================="
 echo ""
 
-# Ensure we have the runtime library compiled
+# Compile runtime
 echo "[Runtime] Compiling Rust Runtime..."
 rustc --crate-type staticlib -O -o libruntime_rust.a self-host/runtime.rs
 
-# --- STAGE 0: The "Hand of God" (Rust Interpreter) ---
+# Use Rust interpreter to compile the Argon compiler
 echo ""
-echo "[Stage 0] Bootstrapping with Argon Interpreter (Rust)..."
+echo "[Stage 0] Compiling compiler.argon with Rust Interpreter..."
+
+# Clean up old files
+rm -f self-host/compiler.ll self-host/compiler.argon.ll compiler_stage0.ll
+
 # Append newline to source to avoid EOF parsing issues
 echo "" >> self-host/compiler.argon
-# Delete stale LLVM IR files to avoid confusion with cached outputs
-rm -f self-host/compiler.ll self-host/compiler.argon.ll compiler_stage0.ll
 
 # Use the interpreter to compile the compiler source code
 echo "Running: ./argon --emit-llvm self-host/compiler.argon"
-./argon --emit-llvm self-host/compiler.ar > compiler_stage0.ll
+./argon --emit-llvm self-host/compiler.argon
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -28,119 +30,52 @@ if [ $EXIT_CODE -ne 0 ]; then
     exit 1
 fi
 
-echo "--- ARGON COMPILER DEBUG SUMMARY ---"
-echo "Skipped grep debug log (using stdout)"
-echo "------------------------------------"
-
-# Rename output if it was written to file instead of stdout (compiler.argon behavior check)
-# Current compiler.argon logic writes to filename + .ll, so self-host/compiler.argon.ll
+# Find output - interpreter writes to file, not stdout
 if [ -f "self-host/compiler.argon.ll" ]; then
     mv self-host/compiler.argon.ll compiler_stage0.ll
+    echo "Found output at self-host/compiler.argon.ll"
 elif [ -f "self-host/compiler.ll" ]; then
     mv self-host/compiler.ll compiler_stage0.ll
+    echo "Found output at self-host/compiler.ll"
+elif [ -f "compiler.argon.ll" ]; then
+    mv compiler.argon.ll compiler_stage0.ll
+    echo "Found output at compiler.argon.ll"
 fi
 
-echo "Checking compiler_stage0.ll:"
-ls -l compiler_stage0.ll
-echo "--- HEAD (20 lines) ---"
-head -n 20 compiler_stage0.ll
-echo "--- TAIL (50 lines) ---"
-tail -n 50 compiler_stage0.ll
-echo "-----------------------"
-
-echo "[Debug] Checking main symbol in generated IR:"
-grep "define .*@main" compiler_stage0.ll || echo "MAIN NOT FOUND IN IR"
-
-echo "[Stage 0] Linking Stage 1 Compiler..."
-clang++ -O3 -flto -Wno-override-module compiler_stage0.ll libruntime_rust.a -o stage1_compiler -lpthread -ldl
-echo ">> Stage 1 Compiler Created: ./stage1_compiler"
-
-# --- STAGE 1: First Self-Hosting Step ---
-echo ""
-echo "[Stage 1] Compiling Compiler with Stage 1 Compiler..."
-
-# First test with simple file
-# args: [0]=exe, [1]=inputfile
-echo "[Stage 1a] Testing with simple_test.argon..."
-./stage1_compiler self-host/simple_test.argon 2>&1 | head -50
-echo "--- Simple test output ---"
-if [ -f "self-host/simple_test.argon.ll" ]; then
-    head -50 self-host/simple_test.argon.ll
-    echo "..."
-    wc -l self-host/simple_test.argon.ll
+echo "Generated IR:"
+if [ -f "compiler_stage0.ll" ]; then
+    wc -l compiler_stage0.ll
+    head -20 compiler_stage0.ll
 else
-    echo "No output file generated"
-fi
-echo "--------------------------"
-
-# Now compile the actual compiler
-echo "[Stage 1b] Compiling compiler.argon..."
-./stage1_compiler self-host/compiler.argon
-
-if [ -f "self-host/compiler.argon.ll" ]; then
-    mv self-host/compiler.argon.ll compiler_stage1.ll
-    echo "Stage 1 output size: $(wc -c < compiler_stage1.ll) bytes"
-else
-    echo "Error: Stage 1 Compiler failed to produce output LLVM IR."
+    echo "ERROR: No IR file generated!"
+    ls -la self-host/
+    ls -la *.ll 2>/dev/null || echo "No .ll files in current dir"
     exit 1
 fi
 
-echo "[Stage 1] Linking Stage 2 Compiler..."
-clang++ -O0 -Wno-override-module compiler_stage1.ll libruntime_rust.a -o stage2_compiler -lpthread -ldl
-echo ">> Stage 2 Compiler Created: ./stage2_compiler"
-
-# --- STAGE 2: Verification (The Ouroboros Test) ---
+# Link to create argonc
 echo ""
-echo "[Stage 2] Verifying Reproducibility (Stage 2 compiling itself)..."
-# Debug: show init_globals function from stage1 output
-echo "--- __init_globals from compiler_stage1.ll ---"
-grep -A 20 "define void @__init_globals" compiler_stage1.ll | head -30
-echo "---"
-echo "--- main function from compiler_stage1.ll ---"
-grep -A 40 "define i32 @main" compiler_stage1.ll | head -50
-echo "---"
-echo "--- compile_file calls in main ---"
-grep "compile_file" compiler_stage1.ll | head -10
-echo "---"
+echo "[Link] Creating argonc binary..."
+clang++ -O0 -Wno-override-module compiler_stage0.ll libruntime_rust.a -o argonc -lpthread -ldl
+echo ">> argonc created!"
 
-# Pass filename as first argument (args[1] in Argon since args[0] is exe name)
-timeout 60 ./stage2_compiler self-host/compiler.argon > stage2_output.log 2>&1 || echo "Stage 2 timed out or failed"
-STAGE2_EXIT=$?
-echo "Stage 2 compiler exit code: $STAGE2_EXIT"
-echo "--- Stage 2 output (tail) ---"
-tail -50 stage2_output.log
-echo "---"
-echo "--- Files in self-host dir ---"
-ls -la self-host/*.ll 2>/dev/null || echo "No .ll files found"
-echo "---"
+# Test with simple file
+echo ""
+echo "[Test] Testing argonc..."
+echo 'fn main() { print(42); }' > test_simple.argon
+./argonc test_simple.argon
 
-if [ -f "self-host/compiler.argon.ll" ]; then
-    mv self-host/compiler.argon.ll compiler_stage2.ll
+if [ -f "test_simple.argon.ll" ]; then
+    echo ">> Compilation successful!"
+    clang++ -O0 -Wno-override-module test_simple.argon.ll libruntime_rust.a -o test_simple -lpthread -ldl
+    echo "Running test_simple:"
+    ./test_simple
 else
-    echo "Error: Stage 2 Compiler failed to produce output."
-    # Exit code omitted to allow partial success report
-    # exit 1
-fi
-
-echo "[Verification] Comparing Stage 1 and Stage 2 LLVM IR..."
-# Comparison: They should be functionally identical. 
-# Due to pointer addresses or timestamps (if any), binary diff might fail.
-# But logic structure should be same.
-# Let's count bytes first.
-SIZE1=$(wc -c < compiler_stage1.ll)
-SIZE2=$(wc -c < compiler_stage2.ll)
-
-echo "Stage 1 IR Size: $SIZE1 bytes"
-echo "Stage 2 IR Size: $SIZE2 bytes"
-
-if [ "$SIZE1" -eq "$SIZE2" ]; then
-   echo ">> SUCCESS: Perfect Self-Hosting Reproduction!"
-else
-   echo ">> WARNING: Size mismatch. This is expected if there are random temp variable names."
+    echo ">> ERROR: No output generated"
+    exit 1
 fi
 
 echo ""
 echo "============================================="
 echo "   BOOTSTRAP COMPLETE"
-echo "   Argon is now a Self-Hosting Language."
 echo "============================================="

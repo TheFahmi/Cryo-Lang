@@ -65,32 +65,40 @@ pub extern "C" fn argon_add(a: i64, b: i64) -> i64 {
             if (*header_a).type_tag == OBJ_STRING && (*header_b).type_tag == OBJ_STRING {
                 let str_a = a as *mut ObjString;
                 let str_b = b as *mut ObjString;
+                // Create new ObjString with concatenated data directly
                 let concatenated = format!("{}{}", &(*str_a).data, &(*str_b).data);
-                let cstr = std::ffi::CString::new(concatenated).unwrap();
-                return argon_str_new(cstr.as_ptr());
+                let size = std::mem::size_of::<ObjString>();
+                let ptr = alloc_obj(size, OBJ_STRING) as *mut ObjString;
+                ptr::write(&mut (*ptr).data, concatenated);
+                return ptr as i64;
             }
         }
     }
-    // String + Int or Int + String
+    // String + Int
     if is_ptr(a) && is_int(b) {
         unsafe {
             let header = a as *mut ObjHeader;
             if (*header).type_tag == OBJ_STRING {
                 let str_obj = a as *mut ObjString;
                 let concatenated = format!("{}{}", &(*str_obj).data, to_int(b));
-                let cstr = std::ffi::CString::new(concatenated).unwrap();
-                return argon_str_new(cstr.as_ptr());
+                let size = std::mem::size_of::<ObjString>();
+                let ptr = alloc_obj(size, OBJ_STRING) as *mut ObjString;
+                ptr::write(&mut (*ptr).data, concatenated);
+                return ptr as i64;
             }
         }
     }
+    // Int + String
     if is_int(a) && is_ptr(b) {
         unsafe {
             let header = b as *mut ObjHeader;
             if (*header).type_tag == OBJ_STRING {
                 let str_obj = b as *mut ObjString;
                 let concatenated = format!("{}{}", to_int(a), &(*str_obj).data);
-                let cstr = std::ffi::CString::new(concatenated).unwrap();
-                return argon_str_new(cstr.as_ptr());
+                let size = std::mem::size_of::<ObjString>();
+                let ptr = alloc_obj(size, OBJ_STRING) as *mut ObjString;
+                ptr::write(&mut (*ptr).data, concatenated);
+                return ptr as i64;
             }
         }
     }
@@ -139,7 +147,8 @@ pub extern "C" fn argon_eq(a: i64, b: i64) -> i64 {
             if (*header_a).type_tag == OBJ_STRING && (*header_b).type_tag == OBJ_STRING {
                 let str_a = a as *mut ObjString;
                 let str_b = b as *mut ObjString;
-                if (&(*str_a).data) == (&(*str_b).data) {
+                // Compare STRING CONTENT, not pointer addresses!
+                if (*str_a).data == (*str_b).data {
                     return from_int(1);
                 }
             }
