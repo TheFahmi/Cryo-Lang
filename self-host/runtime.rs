@@ -540,9 +540,9 @@ pub extern "C" fn argon_mutex_lock(mutex_id: i64) -> i64 {
                     // Note: guard is dropped here, so lock is released
                     // For proper mutex semantics, we'd need a different approach
                     return from_int(1);
-                }
+                },
                 Err(_) => return from_int(-1),
-            }
+            };
         }
     }
     from_int(-1)
