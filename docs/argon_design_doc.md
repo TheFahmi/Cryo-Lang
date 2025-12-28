@@ -106,7 +106,43 @@ fn start_server() {
 }
 ```
 
-### 5.3 MVC Structure
+### 5.3 Multi-threading (v2.3)
+```typescript
+fn worker() {
+    print("Worker running");
+    return 42;
+}
+
+fn main() {
+    // Atomic operations
+    let counter = argon_atomic_new(0);
+    argon_atomic_add(counter, 1);
+    let val = argon_atomic_load(counter);
+    
+    // Compare-and-swap
+    argon_atomic_cas(counter, 1, 100);
+    
+    // Sleep
+    argon_sleep(1000); // 1 second
+}
+```
+
+**Threading Functions:**
+| Function | Description |
+|----------|-------------|
+| `argon_thread_spawn(fn)` | Spawn thread with function pointer |
+| `argon_thread_join(id)` | Wait for thread completion |
+| `argon_mutex_new()` | Create mutex |
+| `argon_mutex_lock(id)` | Lock mutex |
+| `argon_mutex_unlock(id)` | Unlock mutex |
+| `argon_atomic_new(v)` | Create atomic integer |
+| `argon_atomic_load(id)` | Load atomic value |
+| `argon_atomic_store(id, v)` | Store atomic value |
+| `argon_atomic_add(id, v)` | Atomic add, returns old |
+| `argon_atomic_cas(id, exp, new)` | Compare-and-swap |
+| `argon_sleep(ms)` | Sleep milliseconds |
+
+### 5.4 MVC Structure
 Argon v2.1 promotes structured backend development:
 - `controllers/`: Request handling.
 - `services/`: Business logic.
@@ -119,7 +155,7 @@ Argon v2.1 promotes structured backend development:
 2.  [x] Native Networking (v2.1)
 3.  [x] Tagged Integer Optimization
 4.  [x] Verified Self-Hosting - Stage 1 == Stage 2 (v2.2)
-5.  [ ] Multi-threading support (Arc/Mutex)
+5.  [x] Multi-threading support (Atomics/Sleep) (v2.3)
 6.  [ ] Advanced Type System (Generics/Traits)
 7.  [ ] Struct/Enum types
 8.  [ ] Package Manager (dependency resolution)

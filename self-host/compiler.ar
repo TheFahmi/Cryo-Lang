@@ -1561,6 +1561,18 @@ fn cg_generate(nodes: any) {
     cg_emit_raw("declare i64 @argon_file_exists(i64)");
     cg_emit_raw("declare i64 @argon_char_code_at(i64, i64)");
     cg_emit_raw("declare i64 @argon_parse_int(i64)");
+    // Multi-threading (v2.3)
+    cg_emit_raw("declare i64 @argon_thread_spawn(i64)");
+    cg_emit_raw("declare i64 @argon_thread_join(i64)");
+    cg_emit_raw("declare i64 @argon_mutex_new()");
+    cg_emit_raw("declare i64 @argon_mutex_lock(i64)");
+    cg_emit_raw("declare i64 @argon_mutex_unlock(i64)");
+    cg_emit_raw("declare i64 @argon_atomic_new(i64)");
+    cg_emit_raw("declare i64 @argon_atomic_load(i64)");
+    cg_emit_raw("declare i64 @argon_atomic_store(i64, i64)");
+    cg_emit_raw("declare i64 @argon_atomic_add(i64, i64)");
+    cg_emit_raw("declare i64 @argon_atomic_cas(i64, i64, i64)");
+    cg_emit_raw("declare i64 @argon_sleep(i64)");
     cg_emit_raw("@.str.int = private constant [5 x i8] c\"%ld\\0A\\00\"");
     cg_emit_raw("@.str.str = private constant [4 x i8] c\"%s\\0A\\00\"");
     
