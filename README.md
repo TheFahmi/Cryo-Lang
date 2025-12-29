@@ -166,5 +166,6 @@ fn main() {
 - [x] Methods on structs (`p.method()`) ✅
 - [x] Enum types with pattern matching ✅
 - [x] Module system / imports ✅
-- [ ] Generic types (`Array<T>`)
+- [ ] First-class functions (for map/filter/reduce)
 - [ ] Standard library
+- [ ] Generic types (`Array<T>`)
