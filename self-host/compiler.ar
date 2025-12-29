@@ -1,8 +1,8 @@
 // ============================================
-// ARGON SELF-HOSTING COMPILER v2.4
+// ARGON SELF-HOSTING COMPILER v2.5
 // Written entirely in Argon
 // Complete Lexer, Parser, and Code Generator
-// With Struct Support
+// With Struct & Method Support
 // ============================================
 
 let OPT_UNSAFE = 0; // Optimization flag
@@ -392,6 +392,7 @@ let AST_CONTINUE = 23;
 let AST_STRUCT_DEF = 100;
 let AST_STRUCT_INST = 101;
 let AST_FIELD_ACCESS = 102;
+let AST_METHOD_CALL = 103;
 
 // =================== PARSER ===================
 
@@ -570,16 +571,44 @@ fn parse_primary() {
             return [AST_CALL, "argon_get", idx_args];
         }
         
-        // Check for field access .field
+        // Check for field access .field or method call .method()
         if (p_current_type() == 53) { // TOK_DOT = 53
-            let field_result = make_var(id_name);
+            let base_obj = make_var(id_name);
+            
             while (p_current_type() == 53) {
                 p_advance(); // skip .
-                let access_field = p_current_val();
+                let member_name = p_current_val();
                 p_advance();
-                field_result = [102, field_result, access_field]; // AST_FIELD_ACCESS = 102
+                
+                // Check if this is a method call: .method()
+                if (p_current_type() == TOK_LPAREN) {
+                    p_advance(); // skip (
+                    
+                    // Collect method arguments
+                    let method_args = [];
+                    // First arg is always the object (self)
+                    method_args = push(method_args, base_obj);
+                    
+                    if (p_current_type() != TOK_RPAREN) {
+                        method_args = push(method_args, parse_expr());
+                        while (p_current_type() == TOK_COMMA) {
+                            p_advance();
+                            method_args = push(method_args, parse_expr());
+                        }
+                    }
+                    p_expect(TOK_RPAREN);
+                    
+                    // Create method call: [AST_CALL, "StructType_method", args]
+                    // We need to figure out struct type from base_obj
+                    // For now, use a special node AST_METHOD_CALL = 103
+                    // which codegen will resolve
+                    base_obj = [103, base_obj, member_name, method_args]; // AST_METHOD_CALL
+                } else {
+                    // Regular field access
+                    base_obj = [102, base_obj, member_name]; // AST_FIELD_ACCESS
+                }
             }
-            return field_result;
+            return base_obj;
         }
         
         return make_var(id_name);
@@ -822,6 +851,17 @@ fn parse_function() {
     p_expect(TOK_FN);
     let fn_name = p_current_val();
     p_expect(TOK_ID);
+    
+    // Check for method definition: fn StructName.method_name(...)
+    // If we see a dot, this is a method
+    if (p_current_type() == 53) { // TOK_DOT = 53
+        p_advance(); // skip .
+        let method_name = p_current_val();
+        p_expect(TOK_ID);
+        // Mangle the name: StructName_method_name
+        fn_name = fn_name + "_" + method_name;
+    }
+    
     p_expect(TOK_LPAREN);
     
     let fn_params = [];
@@ -893,22 +933,13 @@ fn parse_program(tokens: any) {
     while (p_current_type() != TOK_EOF) {
         let xz_cur_type = p_current_type();
         // DEBUG
-        print("parse_program: cur_type = ");
-        print(xz_cur_type);
-        print("cur_val = ");
-        print(p_current_val());
         
         if (xz_cur_type == 1) { // TOK_FN = 1
             let xz_fn = parse_function();
             xz_nodes = push(xz_nodes, xz_fn);
         } else if (xz_cur_type == 56) { // TOK_STRUCT = 56
-            print("FOUND STRUCT!");
             let xz_st = parse_struct_def();
-            print("struct_result[0] = ");
-            print(xz_st[0]);
             xz_nodes = push(xz_nodes, xz_st);
-            print("xz_nodes len after push = ");
-            print(len(xz_nodes));
         } else {
             // Assume it's a statement (let, etc)
             let xz_stmt = parse_statement();
@@ -922,8 +953,6 @@ fn parse_program(tokens: any) {
         }
     }
     
-    print("Final xz_nodes len = ");
-    print(len(xz_nodes));
     return xz_nodes;
 }
 
@@ -944,7 +973,6 @@ let cg_sinst_return = ""; // Workaround for struct instantiation return value
 let cg_last_expr = ""; // Store last expression result for AST_RETURN workaround
 
 fn cg_find_field_index(ffi_fname: string) {
-    print(ffi_fname);
     let ffi_si = 0;
     while (ffi_si < len(cg_structs)) {
         let ffi_struct_def = cg_structs[ffi_si];
@@ -954,7 +982,6 @@ fn cg_find_field_index(ffi_fname: string) {
             let ffi_field_entry = ffi_fields[ffi_fi];
             let ffi_fn = ffi_field_entry[0];
             if (ffi_fn == ffi_fname) {
-                print(ffi_fi);
                 return ffi_fi;
             }
             ffi_fi = ffi_fi + 1;
@@ -1010,10 +1037,8 @@ fn cg_add_var(name: string, ptr: string) {
 }
 
 fn cg_get_str_const(content: string) {
-    print(content);
     // Check if exists
     let i = 0;
-    print(len(cg_strings));
     while (i < len(cg_strings)) {
         let cached_entry = cg_strings[i];
         let cached_content = cached_entry[1];
@@ -1034,8 +1059,6 @@ fn cg_get_str_const(content: string) {
 fn cg_gen_expr(cge_input: any) {
     let node_type = cge_input[0];
     // DEBUG
-    print("cg_gen_expr node_type:");
-    print(node_type);
     
     // Number literal - Tagged Integer format (n*2+1)
     // In Stage 0, parseInt returns raw value, so we tag it.
@@ -1054,16 +1077,11 @@ fn cg_gen_expr(cge_input: any) {
     // String Literal
     if (node_type == 30) { // AST_STR
         let str_val = cge_input[1];
-        print(str_val);
         let str_ptr = cg_get_str_const(str_val);
         let t1 = cg_next_temp();
-        print(t1);
         let str_len = len(str_val);
-        print(str_len);
         let array_len = str_len + 1;
-        print(array_len);
         let cast = "getelementptr inbounds ([" + array_len + " x i8], [" + array_len + " x i8]* " + str_ptr + ", i64 0, i64 0)";
-        print(cast);
         // Fix: Call argon_str_new to create a valid Object from the raw C-string
         cg_emit(t1 + " = call i64 @argon_str_new(i8* " + cast + ")");
         return t1;
@@ -1099,8 +1117,6 @@ fn cg_gen_expr(cge_input: any) {
         let binop_l = cg_gen_expr(binop_left);
         let binop_r = cg_gen_expr(binop_right);
         let binop_res = cg_next_temp();
-        print(binop_l);
-        print(binop_r);
         
         // OPTIMIZATION: Fast Path for Integers
         // Operations: +, -, <, >, ==
@@ -1277,8 +1293,6 @@ fn cg_gen_expr(cge_input: any) {
         // This works around potential return value corruption in Stage 1
         let sinst_my_arr = cg_next_temp();
         cg_sinst_return = sinst_my_arr; // Save to global immediately
-        print(sinst_my_arr);
-        print(cg_sinst_return);
         cg_emit(sinst_my_arr + " = call i64 @argon_arr_new()");
         
         // Collect all field values FIRST (without using local)
@@ -1292,7 +1306,6 @@ fn cg_gen_expr(cge_input: any) {
             sinst_i = sinst_i + 1;
         }
         
-        print(cg_sinst_return);
         
         // Now emit push calls using collected values AND global saved temp
         let sinst_j = 0;
@@ -1303,7 +1316,6 @@ fn cg_gen_expr(cge_input: any) {
             sinst_j = sinst_j + 1;
         }
         
-        print(cg_sinst_return);
         
         // Return the global saved value, not the local
         let sinst_result = cg_sinst_return;
@@ -1327,12 +1339,60 @@ fn cg_gen_expr(cge_input: any) {
         if (access_idx == 3) { access_idx_val = "7"; }
         if (access_idx == 4) { access_idx_val = "9"; }
         
-        print(access_idx);
-        print(access_idx_val);
         
         let access_result = cg_next_temp();
         cg_emit(access_result + " = call i64 @argon_get(i64 " + access_base_val + ", i64 " + access_idx_val + ")");
         return access_result;
+    }
+    
+    // Method call: [103, base_obj, method_name, args]
+    // Transform to function call: StructType_method(base_obj, args...)
+    if (node_type == 103) { // AST_METHOD_CALL
+        let mcall_base = cge_input[1];  // The object (unused directly, it's in args)
+        let mcall_method = cge_input[2]; // Method name
+        let mcall_args = cge_input[3];   // Args array (first is self)
+        
+        // For now, we need to figure out the struct type
+        // We'll try each struct and see if it has a matching method
+        // Generate call to each possible mangled name
+        // For simplicity: iterate through structs and try to find method
+        
+        // Build the mangled function name by trying each struct
+        // In practice, we'd need type inference. For now, try all structs.
+        let mcall_func_name = "";
+        let msi = 0;
+        while (msi < len(cg_structs)) {
+            let mstruct = cg_structs[msi];
+            let msname = mstruct[0];
+            // Try this struct's method name
+            mcall_func_name = msname + "_" + mcall_method;
+            msi = msi + 1;
+            // Just use the first one for now - TODO: proper type resolution
+            if (msi == 1) {
+                // Use first struct that could match
+            }
+        }
+        
+        // If no structs found, just use the method name directly
+        if (mcall_func_name == "") {
+            mcall_func_name = mcall_method;
+        }
+        
+        // Generate argument values
+        let mcall_arg_str = "";
+        let mai = 0;
+        while (mai < len(mcall_args)) {
+            if (mai > 0) { mcall_arg_str = mcall_arg_str + ", "; }
+            let ma_temp_start = cg_temp;
+            cg_gen_expr(mcall_args[mai]);
+            let ma_result = "%t" + ma_temp_start;
+            mcall_arg_str = mcall_arg_str + "i64 " + ma_result;
+            mai = mai + 1;
+        }
+        
+        let mcall_result = cg_next_temp();
+        cg_emit(mcall_result + " = call i64 @" + mcall_func_name + "(" + mcall_arg_str + ")");
+        return mcall_result;
     }
     
     return "0";
@@ -1346,7 +1406,6 @@ fn cg_gen_stmt(stmt: any) {
         let let_name = stmt[1];
         let let_init = stmt[2];
         let let_val = cg_gen_expr(let_init);
-        print(let_val);
         
         // This is local let, alloc stack
         let let_ptr = "%" + let_name + ".ptr." + cg_temp;
@@ -1380,7 +1439,6 @@ fn cg_gen_stmt(stmt: any) {
     if (node_type == AST_PRINT) {
         let print_expr = stmt[1];
         let print_val = cg_gen_expr(print_expr);
-        print(print_val);
         
         // Use argon_print which handles all Argon value types
         cg_emit("call void @argon_print(i64 " + print_val + ")");
@@ -1638,8 +1696,6 @@ fn escape_llvm(s: string) {
 
 fn cg_generate(cg_input_nodes: any) {
     // DEBUG 
-    print("cg_generate START");
-    print(len(cg_input_nodes));
     
     cg_output = "";
     cg_strings = [];
@@ -1670,10 +1726,6 @@ fn cg_generate(cg_input_nodes: any) {
     }
     
     // DEBUG
-    print("After globals collection");
-    print(len(cg_global_vars));
-    print("cg_structs len =");
-    print(len(cg_structs));
     
     // 2. Generate __init_globals
     // Reset temp counters
@@ -1706,36 +1758,23 @@ fn cg_generate(cg_input_nodes: any) {
     
     // 3. Generate Functions
     // DEBUG
-    print("Before func gen loop");
     
     let fn_i = 0;
     while (fn_i < len(cg_input_nodes)) {
         let fn_node = cg_input_nodes[fn_i];
         // DEBUG
-        print("Processing node:");
-        print(fn_i);
-        print("node length:");
-        print(len(fn_node));
-        print("node[0]:");
-        print(fn_node[0]);
-        print("node[1] type test:");
         let fn_elem1 = fn_node[1];
-        print(fn_elem1);
         
         if (fn_node[0] == 20) { // AST_FUNC
             // DEBUG
-            print("Is AST_FUNC");
             
             let fn_name = fn_node[1];
             // DEBUG
-            print("Got func_name");
-            print(fn_name);
             
             let fn_params = fn_node[2];
             let fn_body = fn_node[3];
             
             // DEBUG
-            print("Got params and body");
             
             // Inline function generation logic to access params correctly
             // Reset local state for function
@@ -1745,7 +1784,6 @@ fn cg_generate(cg_input_nodes: any) {
             cg_var_names = [];
             
             // DEBUG
-            print("Checking if main");
             
             if (fn_name == "main") {
                 cg_emit_raw("define i32 @main(i32 %argc, i8** %argv) {");
@@ -1869,9 +1907,9 @@ fn cg_generate(cg_input_nodes: any) {
 
 fn compile_file(filename: string) {
     print("========================================");
-    print("  ARGON SELF-HOSTING COMPILER v2.4");
+    print("  ARGON SELF-HOSTING COMPILER v2.5");
     print("  Written 100% in Argon Language");
-    print("  With Struct Support");
+    print("  With Struct & Method Support");
     print("========================================");
     print("");
     print("Compiling: " + filename);

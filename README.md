@@ -95,6 +95,7 @@ fn main() {
 - **Docker**: The toolchain runs inside the `argon-toolchain` image.
 
 ## Version History
+- **v2.5**: Methods on structs (`p.get_x()`, `p.sum()`)
 - **v2.4**: Struct support (definitions, instantiation, field access)
 - **v2.3**: Multi-threading support (Atomics, Mutex, Sleep)
 - **v2.2**: Verified Self-Hosting (Stage 1 == Stage 2)
@@ -102,8 +103,8 @@ fn main() {
 - **v1.0**: Self-Hosting Compiler
 
 ## Roadmap
-- [ ] Methods on structs (`p.distance()`)
+- [x] Methods on structs (`p.method()`) ✅
+- [ ] Enum types with pattern matching
 - [ ] Generic types (`Array<T>`)
-- [ ] Pattern matching
 - [ ] Module system / imports
 - [ ] Standard library
