@@ -1077,12 +1077,37 @@ fn parse_program(tokens: any) {
             let xz_en = parse_enum_def();
             xz_nodes = push(xz_nodes, xz_en);
         } else if (xz_cur_type == 62) { // TOK_IMPORT = 62
-            // import "filename";
+            // Supports two syntaxes:
+            // 1. import "filename";           -> import all
+            // 2. import {a, b} from "file";   -> import selective
             p_advance(); // skip 'import'
-            let import_path = p_current_val();
-            p_expect(12); // TOK_STR = 12
+            
+            let import_names = []; // Empty = import all
+            let import_path = "";
+            
+            if (p_current_type() == 32) { // TOK_LBRACE = 32
+                // Selective import: import {name1, name2} from "path";
+                p_advance(); // skip '{'
+                while (p_current_type() != 33) { // TOK_RBRACE = 33
+                    let imp_name = p_current_val();
+                    import_names = push(import_names, imp_name);
+                    p_expect(10); // TOK_ID
+                    if (p_current_type() == 51) { // TOK_COMMA
+                        p_advance();
+                    }
+                }
+                p_expect(33); // TOK_RBRACE
+                p_expect(63); // TOK_FROM
+                import_path = p_current_val();
+                p_expect(12); // TOK_STR
+            } else {
+                // Simple import: import "filename";
+                import_path = p_current_val();
+                p_expect(12); // TOK_STR = 12
+            }
+            
             p_expect(50); // TOK_SEMI = 50
-            xz_nodes = push(xz_nodes, [120, import_path]); // AST_IMPORT = 120
+            xz_nodes = push(xz_nodes, [120, import_path, import_names]); // AST_IMPORT = 120
         } else {
             // Assume it's a statement (let, etc)
             let xz_stmt = parse_statement();
@@ -2310,7 +2335,15 @@ fn compile_file(filename: string) {
                 
                 // Read and parse imported file
                 if (fileExists(import_path)) {
-                    print("      Importing: " + import_path);
+                    let import_names = node[2]; // Selective names (empty = all)
+                    let selective = len(import_names) > 0;
+                    
+                    if (selective) {
+                        print("      Importing: {" + len(import_names) + " items} from " + import_path);
+                    } else {
+                        print("      Importing: " + import_path);
+                    }
+                    
                     let imp_source = readFile(import_path);
                     let imp_tokens = tokenize(imp_source);
                     let imp_ast = parse_program(imp_tokens);
@@ -2320,7 +2353,38 @@ fn compile_file(filename: string) {
                     while (imp_k < len(imp_ast)) {
                         let imp_node = imp_ast[imp_k];
                         if (imp_node[0] != 120) { // Don't re-add imports
-                            final_ast = push(final_ast, imp_node);
+                            let should_include = true;
+                            
+                            // If selective import, check if this node's name is in the list
+                            if (selective) {
+                                should_include = false;
+                                let node_name = "";
+                                
+                                // Get node name based on type
+                                if (imp_node[0] == 20) { // AST_FUNC
+                                    node_name = imp_node[1];
+                                } else if (imp_node[0] == 100) { // AST_STRUCT_DEF
+                                    node_name = imp_node[1];
+                                } else if (imp_node[0] == 110) { // AST_ENUM_DEF
+                                    node_name = imp_node[1];
+                                } else if (imp_node[0] == 10) { // AST_LET (global)
+                                    node_name = imp_node[1];
+                                }
+                                
+                                // Check if in import list
+                                let name_i = 0;
+                                while (name_i < len(import_names)) {
+                                    if (import_names[name_i] == node_name) {
+                                        should_include = true;
+                                        name_i = len(import_names);
+                                    }
+                                    name_i = name_i + 1;
+                                }
+                            }
+                            
+                            if (should_include) {
+                                final_ast = push(final_ast, imp_node);
+                            }
                         }
                         imp_k = imp_k + 1;
                     }

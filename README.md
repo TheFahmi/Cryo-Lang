@@ -59,12 +59,14 @@ my_api/
 ### Modules & Imports (v2.7)
 ```javascript
 // math_utils.ar
-fn math_add(a, b) {
-    return a + b;
-}
+fn math_add(a, b) { return a + b; }
+fn math_mul(a, b) { return a * b; }
 
-// main.ar
+// main.ar - Import all
 import "math_utils.ar";
+
+// Or selective import
+import {math_add} from "math_utils.ar";
 
 fn main() {
     print(math_add(5, 3)); // 8
