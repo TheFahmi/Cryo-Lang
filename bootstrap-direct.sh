@@ -2,22 +2,22 @@
 set -e
 
 echo "============================================="
-echo "   ARGON DIRECT BOOTSTRAP (Using argonc)"
+echo "   ARGON DIRECT BOOTSTRAP (Using Rust Interpreter)"
 echo "============================================="
 echo ""
 
-# --- Use existing argonc to compile ---
+# --- Use Rust interpreter to compile compiler.ar ---
 echo ""
-echo "[Stage 1] Compiling with existing argonc..."
+echo "[Stage 0] Compiling with Rust interpreter (./argon)..."
 
-# Use argonc (which is already a working self-hosted compiler)
-argonc self-host/compiler.ar
+# Use Rust interpreter as Stage 0 (most reliable)
+./argon self-host/compiler.ar self-host/compiler.ar
 
 if [ -f "self-host/compiler.ar.ll" ]; then
     cp self-host/compiler.ar.ll compiler_stage1.ll
     echo "Stage 1 output size: $(wc -c < compiler_stage1.ll) bytes"
 else
-    echo "Error: argonc failed to produce output LLVM IR."
+    echo "Error: Stage 0 failed to produce output LLVM IR."
     exit 1
 fi
 
