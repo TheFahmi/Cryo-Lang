@@ -1,5 +1,5 @@
-# Argon Toolchain v2.7
-# Pre-built with Module & Pattern Matching support
+# Argon Toolchain v2.8
+# Pre-built with snake_case intrinsics
 FROM rust:slim
 
 RUN apt-get update && apt-get install -y clang llvm && rm -rf /var/lib/apt/lists/*

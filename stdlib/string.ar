@@ -1,0 +1,422 @@
+// ============================================
+// ARGON STANDARD LIBRARY: STRING
+// String manipulation functions
+// ============================================
+
+// Get string length
+fn str_len(s) {
+    return len(s);
+}
+
+// Check if string is empty
+fn is_empty(s) {
+    return len(s) == 0;
+}
+
+// Get character at index (returns single-char string)
+fn char_at(s, idx) {
+    if (idx < 0) {
+        return "";
+    }
+    if (idx >= len(s)) {
+        return "";
+    }
+    return s[idx];
+}
+
+// Get character code at index
+fn code_at(s, idx) {
+    return char_code_at(s, idx);
+}
+
+// Check if string starts with prefix
+fn starts_with(s, prefix) {
+    let prefix_len = len(prefix);
+    if (prefix_len > len(s)) {
+        return false;
+    }
+    let i = 0;
+    while (i < prefix_len) {
+        if (s[i] != prefix[i]) {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+// Check if string ends with suffix
+fn ends_with(s, suffix) {
+    let s_len = len(s);
+    let suffix_len = len(suffix);
+    if (suffix_len > s_len) {
+        return false;
+    }
+    let offset = s_len - suffix_len;
+    let i = 0;
+    while (i < suffix_len) {
+        if (s[offset + i] != suffix[i]) {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+// Check if string contains substring
+fn contains(s, sub) {
+    return index_of(s, sub) >= 0;
+}
+
+// Find index of substring (returns -1 if not found)
+fn index_of(s, sub) {
+    let s_len = len(s);
+    let sub_len = len(sub);
+    if (sub_len == 0) {
+        return 0;
+    }
+    if (sub_len > s_len) {
+        return 0 - 1;
+    }
+    
+    let i = 0;
+    while (i <= s_len - sub_len) {
+        let match = true;
+        let j = 0;
+        while (j < sub_len) {
+            if (s[i + j] != sub[j]) {
+                match = false;
+                j = sub_len; // break
+            } else {
+                j = j + 1;
+            }
+        }
+        if (match) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return 0 - 1;
+}
+
+// Find last index of substring
+fn last_index_of(s, sub) {
+    let s_len = len(s);
+    let sub_len = len(sub);
+    if (sub_len == 0) {
+        return s_len;
+    }
+    if (sub_len > s_len) {
+        return 0 - 1;
+    }
+    
+    let i = s_len - sub_len;
+    while (i >= 0) {
+        let match = true;
+        let j = 0;
+        while (j < sub_len) {
+            if (s[i + j] != sub[j]) {
+                match = false;
+                j = sub_len;
+            } else {
+                j = j + 1;
+            }
+        }
+        if (match) {
+            return i;
+        }
+        i = i - 1;
+    }
+    return 0 - 1;
+}
+
+// Extract substring
+fn substring(s, start, end) {
+    let s_len = len(s);
+    if (start < 0) {
+        start = 0;
+    }
+    if (end > s_len) {
+        end = s_len;
+    }
+    if (start >= end) {
+        return "";
+    }
+    
+    let result = "";
+    let i = start;
+    while (i < end) {
+        result = result + s[i];
+        i = i + 1;
+    }
+    return result;
+}
+
+// Extract substring from start to end of string
+fn substr(s, start) {
+    return substring(s, start, len(s));
+}
+
+// Repeat string n times
+fn repeat(s, n) {
+    if (n <= 0) {
+        return "";
+    }
+    let result = "";
+    let i = 0;
+    while (i < n) {
+        result = result + s;
+        i = i + 1;
+    }
+    return result;
+}
+
+// Reverse string
+fn reverse(s) {
+    let result = "";
+    let i = len(s) - 1;
+    while (i >= 0) {
+        result = result + s[i];
+        i = i - 1;
+    }
+    return result;
+}
+
+// Trim whitespace from both ends
+fn trim(s) {
+    return trim_end(trim_start(s));
+}
+
+// Trim whitespace from start
+fn trim_start(s) {
+    let i = 0;
+    let n = len(s);
+    while (i < n) {
+        let c = s[i];
+        if (c != " ") {
+            if (c != "\t") {
+                if (c != "\n") {
+                    if (c != "\r") {
+                        // Found non-whitespace
+                        return substring(s, i, n);
+                    }
+                }
+            }
+        }
+        i = i + 1;
+    }
+    return "";
+}
+
+// Trim whitespace from end
+fn trim_end(s) {
+    let n = len(s);
+    let i = n - 1;
+    while (i >= 0) {
+        let c = s[i];
+        if (c != " ") {
+            if (c != "\t") {
+                if (c != "\n") {
+                    if (c != "\r") {
+                        return substring(s, 0, i + 1);
+                    }
+                }
+            }
+        }
+        i = i - 1;
+    }
+    return "";
+}
+
+// Pad string on left to reach length
+fn pad_start(s, target_len, pad_char) {
+    let current_len = len(s);
+    if (current_len >= target_len) {
+        return s;
+    }
+    let pad_count = target_len - current_len;
+    return repeat(pad_char, pad_count) + s;
+}
+
+// Pad string on right to reach length
+fn pad_end(s, target_len, pad_char) {
+    let current_len = len(s);
+    if (current_len >= target_len) {
+        return s;
+    }
+    let pad_count = target_len - current_len;
+    return s + repeat(pad_char, pad_count);
+}
+
+// Split string by delimiter
+fn split(s, delim) {
+    let result = [];
+    let s_len = len(s);
+    let delim_len = len(delim);
+    
+    if (delim_len == 0) {
+        // Split into characters
+        let i = 0;
+        while (i < s_len) {
+            result = push(result, s[i]);
+            i = i + 1;
+        }
+        return result;
+    }
+    
+    let start = 0;
+    let i = 0;
+    while (i <= s_len - delim_len) {
+        let match = true;
+        let j = 0;
+        while (j < delim_len) {
+            if (s[i + j] != delim[j]) {
+                match = false;
+                j = delim_len;
+            } else {
+                j = j + 1;
+            }
+        }
+        if (match) {
+            result = push(result, substring(s, start, i));
+            start = i + delim_len;
+            i = start;
+        } else {
+            i = i + 1;
+        }
+    }
+    // Add remaining
+    result = push(result, substring(s, start, s_len));
+    return result;
+}
+
+// Join array elements with separator
+fn join(arr, sep) {
+    let result = "";
+    let i = 0;
+    let n = len(arr);
+    while (i < n) {
+        if (i > 0) {
+            result = result + sep;
+        }
+        result = result + arr[i];
+        i = i + 1;
+    }
+    return result;
+}
+
+// Replace first occurrence of old with new
+fn replace(s, old, new) {
+    let idx = index_of(s, old);
+    if (idx < 0) {
+        return s;
+    }
+    let before = substring(s, 0, idx);
+    let after = substring(s, idx + len(old), len(s));
+    return before + new + after;
+}
+
+// Replace all occurrences of old with new
+fn replace_all(s, old, new) {
+    let old_len = len(old);
+    if (old_len == 0) {
+        return s;
+    }
+    
+    let result = "";
+    let s_len = len(s);
+    let i = 0;
+    
+    while (i < s_len) {
+        let match = true;
+        if (i <= s_len - old_len) {
+            let j = 0;
+            while (j < old_len) {
+                if (s[i + j] != old[j]) {
+                    match = false;
+                    j = old_len;
+                } else {
+                    j = j + 1;
+                }
+            }
+        } else {
+            match = false;
+        }
+        
+        if (match) {
+            result = result + new;
+            i = i + old_len;
+        } else {
+            result = result + s[i];
+            i = i + 1;
+        }
+    }
+    return result;
+}
+
+// Convert to uppercase (ASCII only)
+fn to_upper(s) {
+    let result = "";
+    let i = 0;
+    let n = len(s);
+    while (i < n) {
+        let code = char_code_at(s, i);
+        // a-z: 97-122 -> A-Z: 65-90
+        if (code >= 97) {
+            if (code <= 122) {
+                code = code - 32;
+            }
+        }
+        // Convert code back to char - simplified, just append
+        result = result + s[i]; // TODO: proper char from code
+        i = i + 1;
+    }
+    return result;
+}
+
+// Convert to lowercase (ASCII only)  
+fn to_lower(s) {
+    let result = "";
+    let i = 0;
+    let n = len(s);
+    while (i < n) {
+        let code = char_code_at(s, i);
+        // A-Z: 65-90 -> a-z: 97-122
+        if (code >= 65) {
+            if (code <= 90) {
+                code = code + 32;
+            }
+        }
+        result = result + s[i]; // TODO: proper char from code
+        i = i + 1;
+    }
+    return result;
+}
+
+// Check if string is numeric
+fn is_numeric(s) {
+    let n = len(s);
+    if (n == 0) {
+        return false;
+    }
+    let i = 0;
+    // Allow leading minus
+    if (s[0] == "-") {
+        if (n == 1) {
+            return false;
+        }
+        i = 1;
+    }
+    while (i < n) {
+        let code = char_code_at(s, i);
+        // 0-9: 48-57
+        if (code < 48) {
+            return false;
+        }
+        if (code > 57) {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}

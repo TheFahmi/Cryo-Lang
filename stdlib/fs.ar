@@ -1,0 +1,251 @@
+// ============================================
+// ARGON STANDARD LIBRARY: FILE (fs)
+// File system operations
+// ============================================
+
+// Read entire file as string
+fn fs_read(path) {
+    return read_file(path);
+}
+
+// Write string to file
+fn fs_write(path, content) {
+    return write_file(path, content);
+}
+
+// Check if file exists
+fn fs_exists(path) {
+    return file_exists(path);
+}
+
+// Read file as lines
+fn fs_read_lines(path) {
+    let content = read_file(path);
+    return fs_split_lines(content);
+}
+
+// Write lines to file
+fn fs_write_lines(path, lines) {
+    let content = fs_join_lines(lines);
+    return write_file(path, content);
+}
+
+// Append to file
+fn fs_append(path, content) {
+    let existing = "";
+    if (file_exists(path)) {
+        existing = read_file(path);
+    }
+    return write_file(path, existing + content);
+}
+
+// Append line to file
+fn fs_append_line(path, line) {
+    return fs_append(path, line + "\n");
+}
+
+// Get file extension
+fn fs_extension(path) {
+    let i = len(path) - 1;
+    while (i >= 0) {
+        let c = path[i];
+        if (c == ".") {
+            return fs_substring(path, i + 1, len(path));
+        }
+        if (c == "/") {
+            return "";
+        }
+        if (c == "\\") {
+            return "";
+        }
+        i = i - 1;
+    }
+    return "";
+}
+
+// Get filename from path
+fn fs_basename(path) {
+    let i = len(path) - 1;
+    while (i >= 0) {
+        let c = path[i];
+        if (c == "/") {
+            return fs_substring(path, i + 1, len(path));
+        }
+        if (c == "\\") {
+            return fs_substring(path, i + 1, len(path));
+        }
+        i = i - 1;
+    }
+    return path;
+}
+
+// Get directory from path
+fn fs_dirname(path) {
+    let i = len(path) - 1;
+    while (i >= 0) {
+        let c = path[i];
+        if (c == "/") {
+            return fs_substring(path, 0, i);
+        }
+        if (c == "\\") {
+            return fs_substring(path, 0, i);
+        }
+        i = i - 1;
+    }
+    return ".";
+}
+
+// Join path components
+fn fs_join(a, b) {
+    if (len(a) == 0) {
+        return b;
+    }
+    if (len(b) == 0) {
+        return a;
+    }
+    
+    let last = a[len(a) - 1];
+    if (last == "/") {
+        return a + b;
+    }
+    if (last == "\\") {
+        return a + b;
+    }
+    return a + "/" + b;
+}
+
+// Normalize path (convert backslashes to forward slashes)
+fn fs_normalize(path) {
+    let result = "";
+    let i = 0;
+    while (i < len(path)) {
+        let c = path[i];
+        if (c == "\\") {
+            result = result + "/";
+        } else {
+            result = result + c;
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Check if path is absolute
+fn fs_is_absolute(path) {
+    if (len(path) == 0) {
+        return false;
+    }
+    // Unix absolute
+    if (path[0] == "/") {
+        return true;
+    }
+    // Windows absolute (C:\ etc)
+    if (len(path) >= 3) {
+        let code = char_code_at(path, 0);
+        if ((code >= 65) == (code <= 90)) {  // A-Z
+            if (path[1] == ":") {
+                if (path[2] == "/") {
+                    return true;
+                }
+                if (path[2] == "\\") {
+                    return true;
+                }
+            }
+        }
+        if ((code >= 97) == (code <= 122)) {  // a-z
+            if (path[1] == ":") {
+                if (path[2] == "/") {
+                    return true;
+                }
+                if (path[2] == "\\") {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// Remove file extension
+fn fs_remove_extension(path) {
+    let i = len(path) - 1;
+    while (i >= 0) {
+        let c = path[i];
+        if (c == ".") {
+            return fs_substring(path, 0, i);
+        }
+        if (c == "/") {
+            return path;
+        }
+        if (c == "\\") {
+            return path;
+        }
+        i = i - 1;
+    }
+    return path;
+}
+
+// Change file extension
+fn fs_change_extension(path, new_ext) {
+    let base = fs_remove_extension(path);
+    if (len(new_ext) == 0) {
+        return base;
+    }
+    if (new_ext[0] == ".") {
+        return base + new_ext;
+    }
+    return base + "." + new_ext;
+}
+
+// Helper: split string into lines
+fn fs_split_lines(s) {
+    let result = [];
+    let current = "";
+    let i = 0;
+    while (i < len(s)) {
+        let c = s[i];
+        if (c == "\n") {
+            // Remove trailing \r
+            if (len(current) > 0) {
+                if (current[len(current) - 1] == "\r") {
+                    current = fs_substring(current, 0, len(current) - 1);
+                }
+            }
+            result = push(result, current);
+            current = "";
+        } else {
+            current = current + c;
+        }
+        i = i + 1;
+    }
+    // Don't forget last line (if no trailing newline)
+    if (len(current) > 0) {
+        result = push(result, current);
+    }
+    return result;
+}
+
+// Helper: join lines with newline
+fn fs_join_lines(lines) {
+    let result = "";
+    let i = 0;
+    while (i < len(lines)) {
+        if (i > 0) {
+            result = result + "\n";
+        }
+        result = result + lines[i];
+        i = i + 1;
+    }
+    return result;
+}
+
+// Helper: substring
+fn fs_substring(s, start, end) {
+    let result = "";
+    let i = start;
+    while (i < end) {
+        result = result + s[i];
+        i = i + 1;
+    }
+    return result;
+}

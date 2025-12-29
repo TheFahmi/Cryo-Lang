@@ -1,0 +1,360 @@
+// ============================================
+// ARGON STANDARD LIBRARY: ARRAY
+// Array manipulation functions
+// ============================================
+
+// Create new empty array
+fn array_new() {
+    return [];
+}
+
+// Get array length
+fn array_len(arr) {
+    return len(arr);
+}
+
+// Check if array is empty
+fn array_is_empty(arr) {
+    return len(arr) == 0;
+}
+
+// Get element at index (with bounds check)
+fn array_get(arr, idx) {
+    if (idx < 0) {
+        return null;
+    }
+    if (idx >= len(arr)) {
+        return null;
+    }
+    return arr[idx];
+}
+
+// Get first element
+fn array_first(arr) {
+    if (len(arr) == 0) {
+        return null;
+    }
+    return arr[0];
+}
+
+// Get last element
+fn array_last(arr) {
+    let n = len(arr);
+    if (n == 0) {
+        return null;
+    }
+    return arr[n - 1];
+}
+
+// Append element to array (returns new array)
+fn array_push(arr, elem) {
+    return push(arr, elem);
+}
+
+// Create array with n copies of value
+fn array_fill(n, value) {
+    let result = [];
+    let i = 0;
+    while (i < n) {
+        result = push(result, value);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Create range array [start..end)
+fn array_range(start, end) {
+    let result = [];
+    let i = start;
+    while (i < end) {
+        result = push(result, i);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Create range with step
+fn array_range_step(start, end, step) {
+    let result = [];
+    if (step > 0) {
+        let i = start;
+        while (i < end) {
+            result = push(result, i);
+            i = i + step;
+        }
+    } else if (step < 0) {
+        let i = start;
+        while (i > end) {
+            result = push(result, i);
+            i = i + step;
+        }
+    }
+    return result;
+}
+
+// Find index of element (-1 if not found)
+fn array_index_of(arr, elem) {
+    let i = 0;
+    let n = len(arr);
+    while (i < n) {
+        if (arr[i] == elem) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return 0 - 1;
+}
+
+// Check if array contains element
+fn array_contains(arr, elem) {
+    return array_index_of(arr, elem) >= 0;
+}
+
+// Count occurrences of element
+fn array_count(arr, elem) {
+    let count = 0;
+    let i = 0;
+    let n = len(arr);
+    while (i < n) {
+        if (arr[i] == elem) {
+            count = count + 1;
+        }
+        i = i + 1;
+    }
+    return count;
+}
+
+// Reverse array (returns new array)
+fn array_reverse(arr) {
+    let result = [];
+    let i = len(arr) - 1;
+    while (i >= 0) {
+        result = push(result, arr[i]);
+        i = i - 1;
+    }
+    return result;
+}
+
+// Slice array [start..end)
+fn array_slice(arr, start, end) {
+    let n = len(arr);
+    if (start < 0) {
+        start = 0;
+    }
+    if (end > n) {
+        end = n;
+    }
+    
+    let result = [];
+    let i = start;
+    while (i < end) {
+        result = push(result, arr[i]);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Concatenate two arrays
+fn array_concat(arr1, arr2) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr1)) {
+        result = push(result, arr1[i]);
+        i = i + 1;
+    }
+    i = 0;
+    while (i < len(arr2)) {
+        result = push(result, arr2[i]);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Flatten nested array (one level)
+fn array_flatten(arr) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        let item = arr[i];
+        // Check if item is array (has length > 0 or is empty array)
+        // This is a heuristic - we try to iterate
+        let j = 0;
+        let item_len = len(item);
+        while (j < item_len) {
+            result = push(result, item[j]);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Remove duplicates
+fn array_unique(arr) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        if (array_index_of(result, arr[i]) < 0) {
+            result = push(result, arr[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Take first n elements
+fn array_take(arr, n) {
+    if (n > len(arr)) {
+        n = len(arr);
+    }
+    return array_slice(arr, 0, n);
+}
+
+// Skip first n elements
+fn array_skip(arr, n) {
+    return array_slice(arr, n, len(arr));
+}
+
+// Sort array (bubble sort - simple but slow)
+fn array_sort(arr) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        result = push(result, arr[i]);
+        i = i + 1;
+    }
+    
+    let n = len(result);
+    let swapped = true;
+    while (swapped) {
+        swapped = false;
+        i = 0;
+        while (i < n - 1) {
+            if (result[i] > result[i + 1]) {
+                let temp = result[i];
+                result = array_set(result, i, result[i + 1]);
+                result = array_set(result, i + 1, temp);
+                swapped = true;
+            }
+            i = i + 1;
+        }
+    }
+    return result;
+}
+
+// Set element at index (returns new array)
+fn array_set(arr, idx, value) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        if (i == idx) {
+            result = push(result, value);
+        } else {
+            result = push(result, arr[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Insert element at index
+fn array_insert(arr, idx, value) {
+    let result = [];
+    let i = 0;
+    let inserted = false;
+    while (i < len(arr)) {
+        if (i == idx) {
+            result = push(result, value);
+            inserted = true;
+        }
+        result = push(result, arr[i]);
+        i = i + 1;
+    }
+    if (inserted == false) {
+        result = push(result, value);
+    }
+    return result;
+}
+
+// Remove element at index
+fn array_remove_at(arr, idx) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        if (i != idx) {
+            result = push(result, arr[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Remove first occurrence of element
+fn array_remove(arr, elem) {
+    let idx = array_index_of(arr, elem);
+    if (idx < 0) {
+        return arr;
+    }
+    return array_remove_at(arr, idx);
+}
+
+// Filter array - keep elements equal to value
+fn array_filter_eq(arr, value) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        if (arr[i] == value) {
+            result = push(result, arr[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Filter array - keep elements not equal to value
+fn array_filter_neq(arr, value) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        if (arr[i] != value) {
+            result = push(result, arr[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Zip two arrays into array of pairs
+fn array_zip(arr1, arr2) {
+    let result = [];
+    let min_len = len(arr1);
+    if (len(arr2) < min_len) {
+        min_len = len(arr2);
+    }
+    let i = 0;
+    while (i < min_len) {
+        let pair = [];
+        pair = push(pair, arr1[i]);
+        pair = push(pair, arr2[i]);
+        result = push(result, pair);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Check if all elements are equal
+fn array_all_equal(arr) {
+    let n = len(arr);
+    if (n <= 1) {
+        return true;
+    }
+    let first = arr[0];
+    let i = 1;
+    while (i < n) {
+        if (arr[i] != first) {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}

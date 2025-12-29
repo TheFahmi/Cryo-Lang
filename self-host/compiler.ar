@@ -1419,12 +1419,20 @@ fn cg_gen_expr(cge_input: any) {
         let call_target = call_name;
         if (call_name == "len") { call_target = "argon_len"; }
         else if (call_name == "push") { call_target = "argon_push"; }
+        // CamelCase (Legacy/JS)
         else if (call_name == "charCodeAt") { call_target = "argon_char_code_at"; }
         else if (call_name == "parseInt") { call_target = "argon_parse_int"; }
         else if (call_name == "readFile") { call_target = "argon_read_file"; }
         else if (call_name == "writeFile") { call_target = "argon_write_file"; }
         else if (call_name == "fileExists") { call_target = "argon_file_exists"; }
         else if (call_name == "getArgs") { call_target = "argon_get_args"; }
+        // snake_case (Consistent)
+        else if (call_name == "char_code_at") { call_target = "argon_char_code_at"; }
+        else if (call_name == "parse_int") { call_target = "argon_parse_int"; }
+        else if (call_name == "read_file") { call_target = "argon_read_file"; }
+        else if (call_name == "write_file") { call_target = "argon_write_file"; }
+        else if (call_name == "file_exists") { call_target = "argon_file_exists"; }
+        else if (call_name == "get_args") { call_target = "argon_get_args"; }
         
         // Check if call_name is an Enum Variant Constructor
         // We iterate all collected enums to find matching variant
