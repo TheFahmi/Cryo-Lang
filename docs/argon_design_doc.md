@@ -179,7 +179,7 @@ Argon v2.1 promotes structured backend development:
 5.  [x] Multi-threading support (Atomics/Sleep) (v2.3)
 6.  [x] Struct types with field access (v2.4)
 7.  [x] Methods on structs (`p.method()`) (v2.5)
-8.  [ ] Enum types with pattern matching
+8.  [x] Enum types with pattern matching (v2.6)
 9.  [ ] Generic types (`Array<T>`)
 10. [ ] Module system / imports
 11. [ ] Package Manager (dependency resolution)

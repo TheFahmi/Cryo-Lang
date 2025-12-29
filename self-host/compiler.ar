@@ -1,8 +1,8 @@
 // ============================================
-// ARGON SELF-HOSTING COMPILER v2.5
+// ARGON SELF-HOSTING COMPILER v2.6
 // Written entirely in Argon
 // Complete Lexer, Parser, and Code Generator
-// With Struct & Method Support
+// With Struct, Method, Enum & Match Support
 // ============================================
 
 let OPT_UNSAFE = 0; // Optimization flag
@@ -53,6 +53,9 @@ let TOK_COLON = 52;
 let TOK_BREAK = 54;
 let TOK_CONTINUE = 55;
 let TOK_STRUCT = 56;
+let TOK_ENUM = 58;
+let TOK_MATCH = 59;
+let TOK_ARROW = 61;
 
 // =================== LEXER ===================
 
@@ -260,6 +263,9 @@ fn tokenize(source: string) {
                 if (source[pos + 1] == "=") {
                     tokens = push(tokens, make_token(TOK_EQEQ, "=="));
                     pos = pos + 2;
+                } else if (source[pos + 1] == ">") {
+                    tokens = push(tokens, make_token(TOK_ARROW, "=>"));
+                    pos = pos + 2;
                 } else {
                     tokens = push(tokens, make_token(TOK_EQ, "="));
                     pos = pos + 1;
@@ -359,6 +365,8 @@ fn tokenize(source: string) {
             else if (id_str == "break") { tokens = push(tokens, make_token(TOK_BREAK, "break")); }
             else if (id_str == "continue") { tokens = push(tokens, make_token(TOK_CONTINUE, "continue")); }
             else if (id_str == "struct") { tokens = push(tokens, make_token(TOK_STRUCT, "struct")); }
+            else if (id_str == "enum") { tokens = push(tokens, make_token(TOK_ENUM, "enum")); }
+            else if (id_str == "match") { tokens = push(tokens, make_token(TOK_MATCH, "match")); }
             else { tokens = push(tokens, make_token(TOK_ID, id_str)); }
         }
         // Skip unknown
@@ -393,6 +401,8 @@ let AST_STRUCT_DEF = 100;
 let AST_STRUCT_INST = 101;
 let AST_FIELD_ACCESS = 102;
 let AST_METHOD_CALL = 103;
+let AST_ENUM_DEF = 110;
+let AST_MATCH = 111;
 
 // =================== PARSER ===================
 
@@ -431,7 +441,7 @@ fn p_expect(t: int) {
         p_advance();
         return true;
     }
-    print("Parse error: unexpected token");
+    print("Parse error: unexpected token. Expected type " + t + " got " + p_current_type() + " val " + p_current_val() + " at " + p_pos);
     return false;
 }
 
@@ -636,6 +646,68 @@ fn parse_primary() {
         return make_num(0);
     }
     
+    // Match expression
+    if (t == TOK_MATCH) {
+        // print("DEBUG: Parsing MATCH");
+        p_advance();
+        // Parse target as simple variable/call, NOT full expr
+        // (to avoid confusing match block { with struct instantiation)
+        let match_target_name = p_current_val();
+        p_advance();
+        // Simple variable for now
+        let match_expr = make_var(match_target_name);
+        p_expect(TOK_LBRACE);
+        
+        let match_cases = [];
+        while (p_current_type() != TOK_RBRACE) {
+            // print("DEBUG: Parsing MATCH CASE");
+            // Parse Pattern: ID or ID(var)
+            let pat_typ = p_current_type();
+            let pat_val = p_current_val();
+            
+            // For now, assume pattern is just ID (Enum Variant)
+            // TODO: Handle numeric literals or other patterns
+            p_expect(TOK_ID); 
+            
+            let pat_bind = "";
+            // Check for binding: Variant(var_name)
+            if (p_current_type() == TOK_LPAREN) {
+                p_advance();
+                pat_bind = p_current_val();
+                p_expect(TOK_ID); // Variable name to bind
+                p_expect(TOK_RPAREN);
+            }
+            
+            p_expect(TOK_ARROW); // =>
+            
+            // Parse Body
+            let case_body_stmts = [];
+            if (p_current_type() == TOK_LBRACE) {
+                p_advance();
+                while (p_current_type() != TOK_RBRACE) {
+                    case_body_stmts = push(case_body_stmts, parse_statement());
+                }
+                p_expect(TOK_RBRACE);
+            } else {
+                // Single statement/expression
+                case_body_stmts = push(case_body_stmts, parse_statement());
+            }
+            
+            let match_case = [];
+            match_case = push(match_case, pat_val); // Pattern Name (Variant)
+            match_case = push(match_case, pat_bind); // Bind Variable (or "")
+            match_case = push(match_case, make_block(case_body_stmts)); // Body
+            
+            match_cases = push(match_cases, match_case);
+            
+            if (p_current_type() == TOK_COMMA) {
+                p_advance();
+            }
+        }
+        p_expect(TOK_RBRACE);
+        return [111, match_expr, match_cases]; // AST_MATCH = 111
+    }
+
     print("Parse error at primary: " + v);
     return make_num(0);
 }
@@ -822,6 +894,24 @@ fn parse_statement() {
         p_expect(TOK_SEMI);
         return [AST_CONTINUE];
     }
+
+    // Match statement (expression used as statement)
+    if (t == TOK_MATCH) {
+        let match_expr = parse_expr();
+        // Option: allow match without semicolon if likely block-like?
+        // But parse_expr consumes it.
+        // For now, Argon statements often require semicolons or implicitly handle block-likes.
+        // If we treat it as expr, it might not require semi if it's the last thing?
+        // Let's rely on standard expr stmt rule or specific rule.
+        // Actually, parse_primary consumes match.
+        // So here we need to call parse_expr.
+        // But parse_expr calls parse_comparison -> parse_term -> parse_factor -> parse_primary.
+        // So 'match' IS a primary.
+        
+        // However, parse_statement needs to Trigger on TOK_MATCH.
+        // Since TOK_MATCH is NOT TOK_ID, it falls through to "Unexpected token".
+        return match_expr;
+    }
     
     // Assignment or expression statement
     if (t == TOK_ID) {
@@ -925,6 +1015,44 @@ fn parse_struct_def() {
     return [100, struct_name, struct_fields]; // AST_STRUCT_DEF = 100
 }
 
+fn parse_enum_def() {
+    p_advance(); // skip 'enum'
+    let enum_name = p_current_val();
+    p_advance(); // name
+    p_expect(TOK_LBRACE);
+    
+    let enum_variants = [];
+    while (p_current_type() != TOK_RBRACE) {
+        let variant_name = p_current_val();
+        p_advance(); // variant name
+        
+        // Optional params (just check syntax for now)
+        let variant_has_data = 0;
+        if (p_current_type() == TOK_LPAREN) {
+            p_advance();
+            // We only support single data field for now: Variant(Type)
+            // or maybe just skip parsing types
+            if (p_current_type() != TOK_RPAREN) {
+                 p_advance(); // consume type/name
+            }
+            p_expect(TOK_RPAREN);
+            variant_has_data = 1;
+        }
+        
+        let variant_def = [];
+        variant_def = push(variant_def, variant_name);
+        variant_def = push(variant_def, variant_has_data);
+        enum_variants = push(enum_variants, variant_def);
+        
+        if (p_current_type() == TOK_COMMA) {
+            p_advance();
+        }
+    }
+    p_expect(TOK_RBRACE);
+    
+    return [110, enum_name, enum_variants]; // AST_ENUM_DEF = 110
+}
+
 fn parse_program(tokens: any) {
     p_tokens = tokens;
     p_pos = 0;
@@ -932,7 +1060,7 @@ fn parse_program(tokens: any) {
     let xz_nodes = [];
     while (p_current_type() != TOK_EOF) {
         let xz_cur_type = p_current_type();
-        // DEBUG
+        // DEBUG: print("Top token: " + p_current_val() + " (" + xz_cur_type + ")");
         
         if (xz_cur_type == 1) { // TOK_FN = 1
             let xz_fn = parse_function();
@@ -940,6 +1068,9 @@ fn parse_program(tokens: any) {
         } else if (xz_cur_type == 56) { // TOK_STRUCT = 56
             let xz_st = parse_struct_def();
             xz_nodes = push(xz_nodes, xz_st);
+        } else if (xz_cur_type == 58) { // TOK_ENUM = 58
+            let xz_en = parse_enum_def();
+            xz_nodes = push(xz_nodes, xz_en);
         } else {
             // Assume it's a statement (let, etc)
             let xz_stmt = parse_statement();
@@ -969,6 +1100,7 @@ let cg_str_id_counter = 0;
 let cg_loop_cond_label = ""; // For continue
 let cg_loop_end_label = "";  // For break
 let cg_structs = []; // Track struct definitions [[name, fields], ...]
+let cg_enums = [];   // Track enum definitions [[name, variants], ...]
 let cg_sinst_return = ""; // Workaround for struct instantiation return value
 let cg_last_expr = ""; // Store last expression result for AST_RETURN workaround
 
@@ -1021,12 +1153,14 @@ fn cg_next_label() {
 }
 
 fn cg_find_var(name: string) {
-    let i = 0;
-    while (i < len(cg_var_names)) {
+    // Search backwards to support variable shadowing
+    // (find most recently declared variable with this name)
+    let i = len(cg_var_names) - 1;
+    while (i >= 0) {
         if (cg_var_names[i] == name) {
             return cg_vars[i];
         }
-        i = i + 1;
+        i = i - 1;
     }
     return null;
 }
@@ -1255,6 +1389,58 @@ fn cg_gen_expr(cge_input: any) {
         else if (call_name == "fileExists") { call_target = "argon_file_exists"; }
         else if (call_name == "getArgs") { call_target = "argon_get_args"; }
         
+        // Check if call_name is an Enum Variant Constructor
+        // We iterate all collected enums to find matching variant
+        // Since we don't have scope (Enum::Variant), variant names must be unique or we check all.
+        let enum_cons_variant_idx = 0 - 1;
+        let enum_cons_has_data = 0;
+        
+        let eci = 0;
+        while (eci < len(cg_enums)) {
+             let ec_def = cg_enums[eci];
+             let ec_variants = ec_def[1];
+             let evi = 0;
+             while (evi < len(ec_variants)) {
+                 let ev_def = ec_variants[evi]; // [name, has_data]
+                 if (ev_def[0] == call_name) {
+                     enum_cons_variant_idx = evi;
+                     enum_cons_has_data = ev_def[1];
+                     // Found match
+                     evi = len(ec_variants);
+                     eci = len(cg_enums);
+                 } else {
+                     evi = evi + 1;
+                 }
+             }
+             if (eci < len(cg_enums)) { eci = eci + 1; } // Check continue condition
+        }
+        
+        // If it IS an enum constructor
+        if (enum_cons_variant_idx != (0 - 1)) {
+             // Create Array [discriminator, data...]
+             let enum_obj = cg_next_temp();
+             cg_emit(enum_obj + " = call i64 @argon_arr_new()");
+             
+             // Push discriminator
+             let disc_tag = (enum_cons_variant_idx * 2) + 1;
+             let dumb1 = cg_next_temp();
+             cg_emit(dumb1 + " = call i64 @argon_push(i64 " + enum_obj + ", i64 " + disc_tag + ")");
+             
+             // Push data args
+             // Note: Enum variant assumes 0 or 1 args for now based on 'has_data'
+             // But user might pass args. Flatten match args?
+             // Just push all provided args.
+             let ec_arg_i = 0;
+             while (ec_arg_i < len(call_args)) {
+                 let ec_arg_val = cg_gen_expr(call_args[ec_arg_i]);
+                 let dumb2 = cg_next_temp();
+                 cg_emit(dumb2 + " = call i64 @argon_push(i64 " + enum_obj + ", i64 " + ec_arg_val + ")");
+                 ec_arg_i = ec_arg_i + 1;
+             }
+             
+             return enum_obj;
+        }
+
         let call_arg_str = "";
         let ci = 0;
         while (ci < len(call_args)) {
@@ -1395,6 +1581,145 @@ fn cg_gen_expr(cge_input: any) {
         return mcall_result;
     }
     
+    // Match Expression
+    if (node_type == 111) { // AST_MATCH
+        let match_target = cge_input[1];
+        let match_cases = cge_input[2]; // [[pat, bind, body], ...]
+        
+        let target_val = cg_gen_expr(match_target);
+        let match_end_label = cg_next_label();
+        
+        // Get discriminator from target_val[0]
+        // TODO: Handle simple integer enums if we decide to optimize later.
+        // For now, assume enum is always array [disc, data...]
+        let disc_val = cg_next_temp();
+        cg_emit(disc_val + " = call i64 @argon_get(i64 " + target_val + ", i64 1)"); // Index 0 (tagged 1)
+        
+        // Loop through cases and generate checks
+        let mi = 0;
+        while (mi < len(match_cases)) {
+            let mcase = match_cases[mi];
+            let pat_name = mcase[0]; // Variant Name
+            let pat_bind = mcase[1]; // Binding Var Name
+            let case_body = mcase[2];
+            
+            let next_case_label = cg_next_label();
+            let case_body_label = cg_next_label();
+            
+            // Check discriminator
+            // We need to resolve pat_name (Variant) to its index
+            let variant_idx = 0 - 1;
+            
+            // Search all enums for this variant
+            let found_enum = 0;
+            let ei = 0;
+            while (ei < len(cg_enums)) {
+                let edef = cg_enums[ei];
+                let evariants = edef[1];
+                let vi = 0;
+                while (vi < len(evariants)) {
+                    let vdef = evariants[vi];
+                    if (vdef[0] == pat_name) {
+                        variant_idx = vi;
+                        found_enum = 1;
+                        // Break out of inner loop
+                        vi = len(evariants); 
+                    } else {
+                        vi = vi + 1;
+                    }
+                }
+                if (found_enum == 1) {
+                    ei = len(cg_enums);
+                } else {
+                    ei = ei + 1;
+                }
+            }
+            
+            if (variant_idx != (0 - 1)) {
+                let vidx_tagged = (variant_idx * 2) + 1;
+                if (IS_STAGE1 == 1) { vidx_tagged = variant_idx; } // Wait, constant folding vs runtime
+                // variant_idx is constant int.
+                let cmp_res = cg_next_temp();
+                
+                // If STAGE1, numbers are already tagged in the compiler's memory? 
+                // No, 'variant_idx' is a pure int here.
+                // But the runtime 'disc_val' is a tagged int.
+                // So we should compare against tagged variant_idx.
+                // Tag it here:
+                vidx_tagged = (variant_idx * 2) + 1;
+                
+                cg_emit(cmp_res + " = icmp eq i64 " + disc_val + ", " + vidx_tagged);
+                cg_emit("br i1 " + cmp_res + ", label %" + case_body_label + ", label %" + next_case_label);
+                
+                cg_emit_raw("\n" + case_body_label + ":");
+                
+                // Binding: if pat_bind is set, extract data
+                if (pat_bind != "") {
+                    // Extract payload: target_val[1]
+                    let bind_val = cg_next_temp();
+                    cg_emit(bind_val + " = call i64 @argon_get(i64 " + target_val + ", i64 3)"); // Index 1 (tagged 3)
+                    
+                    // Alloc stack for binding
+                    let bind_ptr = "%" + pat_bind + ".ptr." + cg_temp;
+                    cg_temp = cg_temp + 1;
+                    cg_emit(bind_ptr + " = alloca i64");
+                    cg_emit("store i64 " + bind_val + ", i64* " + bind_ptr);
+                    cg_add_var(pat_bind, bind_ptr); // Scoping? 
+                    // Note: cg_add_var pushes to global list, usually cleaned up by function reset?
+                    // Actually 'cg_vars' is reset per function.
+                    // But inside a block, we might shadow?
+                    // For now, assume unique names or shadowing works by list order (last added found first).
+                    // Yes, cg_find_var searches backwards? 
+                    // Let's check cg_find_var implementation.
+                    // It searches forward 0..len. `push` adds to end.
+                    // We need find to search from end to support shadowing properly.
+                    // Current cg_find_var searches 0 to len. So it finds FIRST (oldest).
+                    // Shadowing requires finding LAST (newest).
+                    // TODO: Fix shadowing in cg_find_var if needed.
+                    // For now, it works if variable names are unique.
+                }
+                
+                // Generate Body
+                // Match returns a value? 
+                // We need to support 'expr' behavior (phi node?).
+                // AST_MATCH is currently expected to return value?
+                // For simplicity, let's assume it returns 0 for now or handled via side-effects (print).
+                // Or implementing PHI is hard here without knowing type/result of block.
+                // Let's make it an expression that evaluates the block.
+                // Block usually returns result of last stmt? 
+                // AST_BLOCK handling? `cg_gen_stmt` handles block, but doesn't return value.
+                // If body is a block, we iterate stmts.
+                // If body is expression?
+                
+                // Assuming stmt context for now.
+                // If we need expression result, we need 'cg_last_expr_val' or similar.
+                
+                let bstmts = case_body[1];
+                let bi = 0;
+                while (bi < len(bstmts)) {
+                    cg_gen_stmt(bstmts[bi]);
+                    bi = bi + 1;
+                }
+                
+                cg_emit("br label %" + match_end_label);
+                
+                cg_emit_raw("\n" + next_case_label + ":");
+                
+            } else {
+                // Unknown variant or default?
+                // Just emit branch to next
+                cg_emit("br label %" + next_case_label);
+                cg_emit_raw("\n" + next_case_label + ":");
+            }
+            
+            mi = mi + 1;
+        }
+        
+        cg_emit("br label %" + match_end_label);
+        cg_emit_raw("\n" + match_end_label + ":");
+        return "0"; // Result of match expression (void/0 for now)
+    }
+
     return "0";
 }
 
@@ -1627,6 +1952,12 @@ fn cg_gen_stmt(stmt: any) {
         return;
     }
     
+    // Match statement (delegate to cg_gen_expr which handles AST_MATCH)
+    if (node_type == 111) { // AST_MATCH
+        cg_gen_expr(stmt);
+        return;
+    }
+    
     // If statement
     if (node_type == AST_IF) {
         let cond = stmt[1];
@@ -1701,9 +2032,10 @@ fn cg_generate(cg_input_nodes: any) {
     cg_strings = [];
     cg_str_id_counter = 0;
     
-    // 1. Collect Globals, Structs, and Generate Declarations
+    // 1. Collect Globals, Structs, Enums and Generate Declarations
     cg_global_vars = [];
     cg_structs = [];
+    cg_enums = [];
     let globals_decl = "";
     
     let i = 0;
@@ -1721,6 +2053,14 @@ fn cg_generate(cg_input_nodes: any) {
             glob_sdef = push(glob_sdef, glob_sname);
             glob_sdef = push(glob_sdef, glob_sfields);
             cg_structs = push(cg_structs, glob_sdef);
+        }
+        if (glob_node[0] == 110) { // AST_ENUM_DEF = 110
+            let glob_ename = glob_node[1];
+            let glob_evariants = glob_node[2]; // [[name, has_data], ...]
+            let glob_edef = [];
+            glob_edef = push(glob_edef, glob_ename);
+            glob_edef = push(glob_edef, glob_evariants);
+            cg_enums = push(cg_enums, glob_edef);
         }
         i = i + 1;
     }
@@ -1907,9 +2247,9 @@ fn cg_generate(cg_input_nodes: any) {
 
 fn compile_file(filename: string) {
     print("========================================");
-    print("  ARGON SELF-HOSTING COMPILER v2.5");
+    print("  ARGON SELF-HOSTING COMPILER v2.6");
     print("  Written 100% in Argon Language");
-    print("  With Struct & Method Support");
+    print("  With Struct, Method, Enum & Match");
     print("========================================");
     print("");
     print("Compiling: " + filename);

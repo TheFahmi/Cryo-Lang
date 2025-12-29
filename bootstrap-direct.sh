@@ -11,10 +11,10 @@ echo ""
 echo "[Stage 1] Compiling with existing argonc..."
 
 # Use argonc (which is already a working self-hosted compiler)
-argonc self-host/compiler.argon
+argonc self-host/compiler.ar
 
-if [ -f "self-host/compiler.argon.ll" ]; then
-    cp self-host/compiler.argon.ll compiler_stage1.ll
+if [ -f "self-host/compiler.ar.ll" ]; then
+    cp self-host/compiler.ar.ll compiler_stage1.ll
     echo "Stage 1 output size: $(wc -c < compiler_stage1.ll) bytes"
 else
     echo "Error: argonc failed to produce output LLVM IR."
