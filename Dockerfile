@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y clang llvm && rm -rf /var/lib/apt/lists
 WORKDIR /app
 
 # Copy pre-built compiler and runtime
-COPY self-host/argonc_v27 /usr/bin/argonc
+COPY self-host/new_argonc /usr/bin/argonc
 COPY self-host/libruntime_new.a /usr/lib/libruntime_argon.a
 
 # Verify installation
