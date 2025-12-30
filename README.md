@@ -1,4 +1,4 @@
-# Argon Programming Language (v2.14.0)
+# Argon Programming Language (v2.15.0)
 ![Argon Logo](logo.png)
 
 Argon is a high-performance, **self-hosted** systems programming language that compiles directly to LLVM IR and Native Machine Code.
@@ -7,6 +7,8 @@ Argon is a high-performance, **self-hosted** systems programming language that c
 - **Self-Hosted**: Compiler written in Argon itself (`self-host/compiler.ar`)
 - **Verified**: Stage 1 (self-compiled) produces identical output when compiling itself
 - **Native Backend**: Uses LLVM for optimized native binary generation
+- **Generic Types**: `struct Box<T>`, `fn map<T>(...)` syntax support (v2.15.0)
+- **REPL**: Interactive mode for quick experimentation (v2.14.0)
 - **IDE Support**: VS Code extension with full Language Server Protocol (v2.0.0)
 - **Package Manager**: APM with registry, git deps, and lock files (v2.10.0)
 - **Standard Library**: 19 modules (math, string, array, collections, etc)
