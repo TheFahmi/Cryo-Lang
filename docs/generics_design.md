@@ -1,5 +1,10 @@
 # Argon Generic Types Design
 
+## Status: Phase 1 - Syntax Parsing ✅
+
+The compiler now parses generic syntax without errors. Actual type checking
+and monomorphization are not yet implemented - types are ignored at runtime.
+
 ## Overview
 
 Generic types allow writing code that works with multiple types while maintaining type safety.

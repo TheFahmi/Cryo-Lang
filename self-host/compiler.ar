@@ -970,6 +970,18 @@ fn parse_function() {
     let fn_name = p_current_val();
     p_expect(TOK_ID);
     
+    // Check for generic params: fn name<T, U>(...)
+    if (p_current_type() == TOK_LT) {
+        p_advance(); // skip <
+        while (p_current_type() != TOK_GT) {
+            p_advance(); // skip T
+            if (p_current_type() == TOK_COMMA) {
+                p_advance();
+            }
+        }
+        p_expect(TOK_GT);
+    }
+    
     // Check for method definition: fn StructName.method_name(...)
     // If we see a dot, this is a method
     if (p_current_type() == 53) { // TOK_DOT = 53
@@ -989,8 +1001,17 @@ fn parse_function() {
         
         // Skip type annotation
         if (p_current_type() == TOK_COLON) {
-            p_advance();
-            p_advance();
+            p_advance(); // skip :
+            p_advance(); // skip type name
+            // Skip generic type args: param: Box<int>
+            if (p_current_type() == TOK_LT) {
+                p_advance();
+                while (p_current_type() != TOK_GT) {
+                    p_advance();
+                    if (p_current_type() == TOK_COMMA) { p_advance(); }
+                }
+                p_expect(TOK_GT);
+            }
         }
         
         while (p_current_type() == TOK_COMMA) {
@@ -998,8 +1019,17 @@ fn parse_function() {
             fn_params = push(fn_params, p_current_val());
             p_advance();
             if (p_current_type() == TOK_COLON) {
-                p_advance();
-                p_advance();
+                p_advance(); // skip :
+                p_advance(); // skip type name
+                // Skip generic type args
+                if (p_current_type() == TOK_LT) {
+                    p_advance();
+                    while (p_current_type() != TOK_GT) {
+                        p_advance();
+                        if (p_current_type() == TOK_COMMA) { p_advance(); }
+                    }
+                    p_expect(TOK_GT);
+                }
             }
         }
     }
@@ -1019,6 +1049,20 @@ fn parse_struct_def() {
     p_advance(); // skip 'struct'
     let struct_name = p_current_val();
     p_advance(); // skip name
+    
+    // START GENERIC PARAMS
+    if (p_current_type() == TOK_LT) {
+        p_advance(); // skip <
+        while (p_current_type() != TOK_GT) {
+            p_advance(); // skip T
+            if (p_current_type() == TOK_COMMA) {
+                p_advance();
+            }
+        }
+        p_expect(TOK_GT); // skip >
+    }
+    // END GENERIC PARAMS
+
     p_expect(TOK_LBRACE);
     
     let struct_fields = [];
@@ -1028,6 +1072,19 @@ fn parse_struct_def() {
         p_expect(TOK_COLON);
         let field_type = p_current_val();
         p_advance(); // type
+        
+        // START GENERIC TYPE ARGS
+        if (p_current_type() == TOK_LT) {
+            p_advance(); // skip <
+            while (p_current_type() != TOK_GT) {
+                p_advance(); // skip type
+                if (p_current_type() == TOK_COMMA) {
+                    p_advance();
+                }
+            }
+            p_expect(TOK_GT); // skip >
+        }
+        // END GENERIC TYPE ARGS
         
         let field_def = [];
         field_def = push(field_def, field_name);
