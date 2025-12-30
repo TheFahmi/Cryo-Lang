@@ -220,5 +220,6 @@ fn main() {
 - [x] Package Manager (APM) ✅
 - [x] LSP (Language Server Protocol) ✅
 - [x] REPL (interactive mode) ✅
-- [ ] Generic types (`Array<T>`)
+- [x] Generic types syntax (`Box<T>`, `fn<T>`) ✅
+- [ ] Generic types monomorphization (Phase 2)
 - [ ] Debugger support
