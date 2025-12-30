@@ -1,4 +1,4 @@
-# Argon Programming Language (v2.12.0)
+# Argon Programming Language (v2.14.0)
 ![Argon Logo](logo.png)
 
 Argon is a high-performance, **self-hosted** systems programming language that compiles directly to LLVM IR and Native Machine Code.
@@ -7,7 +7,7 @@ Argon is a high-performance, **self-hosted** systems programming language that c
 - **Self-Hosted**: Compiler written in Argon itself (`self-host/compiler.ar`)
 - **Verified**: Stage 1 (self-compiled) produces identical output when compiling itself
 - **Native Backend**: Uses LLVM for optimized native binary generation
-- **IDE Support**: VS Code extension with syntax highlighting and LSP (v2.12.0)
+- **IDE Support**: VS Code extension with full Language Server Protocol (v2.0.0)
 - **Package Manager**: APM with registry, git deps, and lock files (v2.10.0)
 - **Standard Library**: 19 modules (math, string, array, collections, etc)
 - **Methods**: Support for methods on structs (v2.5.0)
@@ -189,7 +189,10 @@ fn main() {
 - **Node.js** (optional): For LSP/VS Code extension
 
 ## Version History
-- **v2.12.0**: LSP and VS Code extension with syntax highlighting
+- **v2.14.0**: Full LSP implementation (Navigation, Editing, Autocomplete)
+- **v2.13.1**: Fixed chained field access and array indexing bugs
+- **v2.13.0**: Fixed NOT operator and runtime functions
+- **v2.12.0**: LSP basics and VS Code extension
 - **v2.11.0**: Collections module (Optional, Pair, Range, Stack, Queue)
 - **v2.10.0**: Package Manager with Central Registry
 - **v2.9.0**: APM with git dependencies and lock files
@@ -212,6 +215,6 @@ fn main() {
 - [x] Standard library (19 modules) ✅
 - [x] Package Manager (APM) ✅
 - [x] LSP (Language Server Protocol) ✅
-- [ ] Generic types (`Array<T>`)
 - [ ] REPL (interactive mode)
+- [ ] Generic types (`Array<T>`)
 - [ ] Debugger support

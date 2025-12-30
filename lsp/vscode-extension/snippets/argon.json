@@ -1,0 +1,150 @@
+{
+    "Function Definition": {
+        "prefix": "fn",
+        "body": [
+            "fn ${1:name}(${2:params}) {",
+            "    ${3}",
+            "}"
+        ],
+        "description": "Define a function"
+    },
+    "Main Function": {
+        "prefix": "main",
+        "body": [
+            "fn main() {",
+            "    ${1}",
+            "    return 0;",
+            "}"
+        ],
+        "description": "Main entry point"
+    },
+    "Variable Declaration": {
+        "prefix": "let",
+        "body": "let ${1:name} = ${2:value};",
+        "description": "Declare a variable"
+    },
+    "If Statement": {
+        "prefix": "if",
+        "body": [
+            "if (${1:condition}) {",
+            "    ${2}",
+            "}"
+        ],
+        "description": "If conditional"
+    },
+    "If-Else Statement": {
+        "prefix": "ife",
+        "body": [
+            "if (${1:condition}) {",
+            "    ${2}",
+            "} else {",
+            "    ${3}",
+            "}"
+        ],
+        "description": "If-else conditional"
+    },
+    "While Loop": {
+        "prefix": "while",
+        "body": [
+            "while (${1:condition}) {",
+            "    ${2}",
+            "}"
+        ],
+        "description": "While loop"
+    },
+    "For-like Loop": {
+        "prefix": "for",
+        "body": [
+            "let ${1:i} = 0;",
+            "while (${1:i} < ${2:n}) {",
+            "    ${3}",
+            "    ${1:i} = ${1:i} + 1;",
+            "}"
+        ],
+        "description": "For-like loop using while"
+    },
+    "Struct Definition": {
+        "prefix": "struct",
+        "body": [
+            "struct ${1:Name} {",
+            "    ${2:field}: ${3:type}",
+            "}"
+        ],
+        "description": "Define a struct"
+    },
+    "Enum Definition": {
+        "prefix": "enum",
+        "body": [
+            "enum ${1:Name} {",
+            "    ${2:Variant}(${3:type})",
+            "}"
+        ],
+        "description": "Define an enum"
+    },
+    "Match Expression": {
+        "prefix": "match",
+        "body": [
+            "match ${1:expr} {",
+            "    ${2:Pattern} => {",
+            "        ${3}",
+            "    }",
+            "}"
+        ],
+        "description": "Pattern matching"
+    },
+    "Import Module": {
+        "prefix": "import",
+        "body": "import \"${1:module}\";",
+        "description": "Import a module"
+    },
+    "Import Stdlib": {
+        "prefix": "stdlib",
+        "body": "import \"stdlib/${1|math,string,array,json,http,fs,time,csv,testing,color,console,validation,random,crypto,env,set,process,regex,collections|}.ar\";",
+        "description": "Import standard library module"
+    },
+    "Print Statement": {
+        "prefix": "print",
+        "body": "print(${1:value});",
+        "description": "Print to stdout"
+    },
+    "Print Debug": {
+        "prefix": "printd",
+        "body": "print(\"${1:label}: \" + ${2:value});",
+        "description": "Print with label"
+    },
+    "Return Statement": {
+        "prefix": "return",
+        "body": "return ${1:value};",
+        "description": "Return from function"
+    },
+    "Method Definition": {
+        "prefix": "method",
+        "body": [
+            "fn ${1:StructName}.${2:method}(self${3:, params}) {",
+            "    ${4}",
+            "}"
+        ],
+        "description": "Define a method on struct"
+    },
+    "Test Function": {
+        "prefix": "test",
+        "body": [
+            "fn test_${1:name}() {",
+            "    // Arrange",
+            "    ${2}",
+            "    ",
+            "    // Act",
+            "    ${3}",
+            "    ",
+            "    // Assert",
+            "    ${4}",
+            "}"
+        ],
+        "description": "Test function template"
+    },
+    "TODO Comment": {
+        "prefix": "todo",
+        "body": "// TODO: ${1:description}",
+        "description": "TODO comment"
+    }
+}
