@@ -7,11 +7,13 @@ Argon is a high-performance, **self-hosted** systems programming language that c
 - **Self-Hosted**: Compiler written in Argon itself (`self-host/compiler.ar`)
 - **Verified**: Stage 1 (self-compiled) produces identical output when compiling itself
 - **Native Backend**: Uses LLVM for optimized native binary generation
+- **Async/Await**: Asynchronous functions with `async fn` and `await` expressions (v2.18.0)
+- **Debugger**: Full GDB/LLDB support with DWARF debug info (v2.17.0)
 - **Generic Types**: Full support for `struct Box<T>`, `fn map<T>(...)` with monomorphization (v2.16.0)
 - **REPL**: Interactive mode for quick experimentation (v2.14.0)
 - **IDE Support**: VS Code extension with full Language Server Protocol (v2.0.0)
 - **Package Manager**: APM with registry, git deps, and lock files (v2.10.0)
-- **Standard Library**: 19 modules (math, string, array, collections, etc)
+- **Standard Library**: 20 modules (math, string, array, async, collections, etc)
 - **Methods**: Support for methods on structs (v2.5.0)
 - **Enums**: Enum types with pattern matching (v2.6.0)
 - **Modules**: Import system for code organization (v2.7.0)

@@ -76,6 +76,8 @@ let TOK_ARROW = 61;
 let TOK_IMPORT = 62;
 let TOK_FROM = 63;
 let TOK_NOT = 70;
+let TOK_ASYNC = 80;
+let TOK_AWAIT = 81;
 
 // =================== LEXER ===================
 
@@ -399,6 +401,8 @@ fn tokenize(source: string) {
             else if (id_str == "match") { tokens = push(tokens, make_token(TOK_MATCH, "match")); }
             else if (id_str == "import") { tokens = push(tokens, make_token(TOK_IMPORT, "import")); }
             else if (id_str == "from") { tokens = push(tokens, make_token(TOK_FROM, "from")); }
+            else if (id_str == "async") { tokens = push(tokens, make_token(TOK_ASYNC, "async")); }
+            else if (id_str == "await") { tokens = push(tokens, make_token(TOK_AWAIT, "await")); }
             else { tokens = push(tokens, make_token(TOK_ID, id_str)); }
         }
         // Skip unknown
@@ -436,6 +440,8 @@ let AST_METHOD_CALL = 103;
 let AST_ENUM_DEF = 110;
 let AST_MATCH = 111;
 let AST_IMPORT = 120;
+let AST_ASYNC_FUNC = 140;  // Async function
+let AST_AWAIT = 141;       // Await expression
 
 // =================== PARSER ===================
 
@@ -531,6 +537,13 @@ fn make_block(stmts: any) {
 fn parse_primary() {
     let t = p_current_type();
     let v = p_current_val();
+    
+    // AWAIT expression: await expr
+    if (t == TOK_AWAIT) {
+        p_advance();
+        let await_expr = parse_expr();
+        return [AST_AWAIT, await_expr];
+    }
     
     // NOT operator: !expr
     if (t == TOK_NOT) {
@@ -1028,6 +1041,18 @@ fn parse_statement() {
     return make_num(0);
 }
 
+// Parse async fn - wraps parse_function
+fn parse_async_function() {
+    p_expect(TOK_ASYNC);  // consume 'async'
+    // Now parse the rest as normal function
+    let func_node = parse_function();
+    // Convert to async version: [AST_ASYNC_FUNC, name, params, body]
+    if (func_node[0] == AST_FUNC) {
+        return [AST_ASYNC_FUNC, func_node[1], func_node[2], func_node[3]];
+    }
+    return func_node;  // Return as-is if generic
+}
+
 fn parse_function() {
     p_expect(TOK_FN);
     let fn_name = p_current_val();
@@ -1227,6 +1252,9 @@ fn parse_program(tokens: any) {
         if (xz_cur_type == 1) { // TOK_FN = 1
             let xz_fn = parse_function();
             xz_nodes = push(xz_nodes, xz_fn);
+        } else if (xz_cur_type == TOK_ASYNC) { // async fn
+            let xz_async = parse_async_function();
+            xz_nodes = push(xz_nodes, xz_async);
         } else if (xz_cur_type == 56) { // TOK_STRUCT = 56
             let xz_st = parse_struct_def();
             xz_nodes = push(xz_nodes, xz_st);
@@ -1450,6 +1478,15 @@ fn cg_gen_expr(cge_input: any) {
         // XOR with 2 flips the second bit: 1 (01) -> 3 (11), 3 (11) -> 1 (01)
         cg_emit(not_res + " = xor i64 " + not_val + ", 2");
         return not_res;
+    }
+    
+    // AWAIT expression: await expr
+    // For now, just evaluate the expression (simple thread-join semantics)
+    if (node_type == AST_AWAIT) {
+        let await_expr = cge_input[1];
+        // Simply evaluate the expression - the async function returns when done
+        let await_val = cg_gen_expr(await_expr);
+        return await_val;
     }
     
     // Binary operation
@@ -2484,6 +2521,48 @@ fn cg_generate(cg_input_nodes: any) {
                 cg_emit("ret i64 0");
                 cg_emit_raw("}");
             }
+            cg_emit_raw("");
+        }
+        
+        // Async function (thread-based implementation)
+        if (fn_node[0] == AST_ASYNC_FUNC) {
+            let fn_name = fn_node[1];
+            let fn_params = fn_node[2];
+            let fn_body = fn_node[3];
+            
+            cg_temp = 0;
+            cg_label = 0;
+            cg_vars = [];
+            cg_var_names = [];
+            
+            // Generate async function (same as regular for now, runtime handles async)
+            let fn_param_str = cg_gen_param_str(fn_params);
+            cg_emit_raw("; Async function");
+            if (DEBUG_MODE == 1) {
+                cg_emit_raw("define i64 @" + fn_name + "(" + fn_param_str + ") !dbg !" + DBG_CURRENT_FUNC + " {");
+            } else {
+                cg_emit_raw("define i64 @" + fn_name + "(" + fn_param_str + ") {");
+            }
+            cg_emit_raw("entry:");
+            
+            let pk = 0;
+            while (pk < len(fn_params)) {
+                let fn_pname = fn_params[pk];
+                let fn_ptr = "%" + fn_pname + ".ptr";
+                cg_emit(fn_ptr + " = alloca i64");
+                cg_emit("store i64 %arg" + pk + ", i64* " + fn_ptr);
+                cg_add_var(fn_pname, fn_ptr);
+                pk = pk + 1;
+            }
+            
+            let stmts = fn_body[1];
+            let si = 0;
+            while (si < len(stmts)) {
+                cg_gen_stmt(stmts[si]);
+                si = si + 1;
+            }
+            cg_emit("ret i64 0");
+            cg_emit_raw("}");
             cg_emit_raw("");
         }
         fn_i = fn_i + 1;

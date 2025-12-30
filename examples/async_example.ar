@@ -1,0 +1,37 @@
+// Async/Await Example
+// Demonstrates async functions and await expressions
+
+async fn slow_operation() {
+    print("Starting slow operation...");
+    sleep(500);
+    print("Slow operation complete!");
+    return 42;
+}
+
+async fn fetch_data(id: int) {
+    print("Fetching data for ID: " + id);
+    sleep(300);
+    return id * 10;
+}
+
+fn main() {
+    print("=== Async/Await Demo ===");
+    print("");
+    
+    // Call async function with await
+    let result = await slow_operation();
+    print("Result: " + result);
+    print("");
+    
+    // Multiple async calls
+    let data1 = await fetch_data(1);
+    let data2 = await fetch_data(2);
+    let data3 = await fetch_data(3);
+    
+    print("Data 1: " + data1);
+    print("Data 2: " + data2);
+    print("Data 3: " + data3);
+    print("");
+    
+    print("=== Done ===");
+}
