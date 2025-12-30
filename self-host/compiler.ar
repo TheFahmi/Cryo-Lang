@@ -1327,7 +1327,11 @@ fn cg_is_global(name: string) {
 }
 
 fn cg_emit(s: string) {
-    cg_output = cg_output + "  " + s + "\n";
+    if (DEBUG_MODE == 1) {
+        cg_output = cg_output + "  " + s + ", !dbg !" + DBG_CURRENT_FUNC + "\n";
+    } else {
+        cg_output = cg_output + "  " + s + "\n";
+    }
 }
 
 fn cg_emit_raw(s: string) {

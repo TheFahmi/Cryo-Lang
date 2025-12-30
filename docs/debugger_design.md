@@ -9,6 +9,22 @@ Add full debugging support to Argon, enabling developers to:
 - View call stack
 - Use standard debuggers (GDB, LLDB)
 
+## Implementation Status ✅
+
+| Feature | Status |
+|---------|--------|
+| Source line tracking in lexer | ✅ Implemented |
+| DEBUG_MODE flag (-g/--debug) | ✅ Implemented |
+| DICompileUnit metadata | ✅ Implemented |
+| DIFile metadata | ✅ Implemented |
+| DIBasicType metadata | ✅ Implemented |
+| DISubroutineType metadata | ✅ Implemented |
+| DISubprogram per function | ✅ Implemented |
+| Function !dbg reference | ✅ Implemented |
+| Instruction !dbg location | ✅ Implemented |
+| GDB in Docker | ✅ Implemented |
+| `argon debug` command | ✅ Implemented |
+
 ## Architecture
 
 ### Phase 1: DWARF Debug Info in LLVM IR
