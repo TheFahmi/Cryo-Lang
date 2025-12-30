@@ -6,9 +6,18 @@
 
 // Map is represented as [[key1, val1], [key2, val2], ...]
 
+// Helper: create a key-value pair
+fn _map_pair(k, v) {
+    let p = [];
+    p = push(p, k);
+    p = push(p, v);
+    return p;
+}
+
 // Create empty map
 fn map_new() {
-    return [];
+    let m = [];
+    return m;
 }
 
 // Get number of entries
@@ -25,7 +34,8 @@ fn map_is_empty(m) {
 fn map_has(m, key) {
     let i = 0;
     while (i < len(m)) {
-        if (m[i][0] == key) {
+        let entry = m[i];
+        if (entry[0] == key) {
             return true;
         }
         i = i + 1;
@@ -37,8 +47,9 @@ fn map_has(m, key) {
 fn map_get(m, key) {
     let i = 0;
     while (i < len(m)) {
-        if (m[i][0] == key) {
-            return m[i][1];
+        let entry = m[i];
+        if (entry[0] == key) {
+            return entry[1];
         }
         i = i + 1;
     }
@@ -49,8 +60,9 @@ fn map_get(m, key) {
 fn map_get_or(m, key, default_val) {
     let i = 0;
     while (i < len(m)) {
-        if (m[i][0] == key) {
-            return m[i][1];
+        let entry = m[i];
+        if (entry[0] == key) {
+            return entry[1];
         }
         i = i + 1;
     }
@@ -64,20 +76,19 @@ fn map_set(m, key, value) {
     let i = 0;
     
     while (i < len(m)) {
-        if (m[i][0] == key) {
-            // Update existing
-            let pair = [key, value];
+        let entry = m[i];
+        if (entry[0] == key) {
+            let pair = _map_pair(key, value);
             result = push(result, pair);
             found = true;
         } else {
-            result = push(result, m[i]);
+            result = push(result, entry);
         }
         i = i + 1;
     }
     
     if (found == false) {
-        // Add new
-        let pair = [key, value];
+        let pair = _map_pair(key, value);
         result = push(result, pair);
     }
     
@@ -89,8 +100,9 @@ fn map_remove(m, key) {
     let result = [];
     let i = 0;
     while (i < len(m)) {
-        if (m[i][0] != key) {
-            result = push(result, m[i]);
+        let entry = m[i];
+        if (entry[0] != key) {
+            result = push(result, entry);
         }
         i = i + 1;
     }
@@ -102,7 +114,8 @@ fn map_keys(m) {
     let result = [];
     let i = 0;
     while (i < len(m)) {
-        result = push(result, m[i][0]);
+        let entry = m[i];
+        result = push(result, entry[0]);
         i = i + 1;
     }
     return result;
@@ -113,20 +126,22 @@ fn map_values(m) {
     let result = [];
     let i = 0;
     while (i < len(m)) {
-        result = push(result, m[i][1]);
+        let entry = m[i];
+        result = push(result, entry[1]);
         i = i + 1;
     }
     return result;
 }
 
-// Get all entries as [[key, val], ...]
+// Get all entries
 fn map_entries(m) {
     return m;
 }
 
 // Clear map
 fn map_clear() {
-    return [];
+    let m = [];
+    return m;
 }
 
 // Merge two maps (second overwrites first)
@@ -134,7 +149,8 @@ fn map_merge(m1, m2) {
     let result = m1;
     let i = 0;
     while (i < len(m2)) {
-        result = map_set(result, m2[i][0], m2[i][1]);
+        let entry = m2[i];
+        result = map_set(result, entry[0], entry[1]);
         i = i + 1;
     }
     return result;
@@ -149,20 +165,21 @@ fn map_from_arrays(keys, values) {
         n = len(values);
     }
     while (i < n) {
-        let pair = [keys[i], values[i]];
+        let pair = _map_pair(keys[i], values[i]);
         result = push(result, pair);
         i = i + 1;
     }
     return result;
 }
 
-// Filter map entries
+// Filter map entries by value
 fn map_filter_by_value(m, value) {
     let result = [];
     let i = 0;
     while (i < len(m)) {
-        if (m[i][1] == value) {
-            result = push(result, m[i]);
+        let entry = m[i];
+        if (entry[1] == value) {
+            result = push(result, entry);
         }
         i = i + 1;
     }
@@ -174,7 +191,8 @@ fn map_invert(m) {
     let result = [];
     let i = 0;
     while (i < len(m)) {
-        let pair = [m[i][1], m[i][0]];
+        let entry = m[i];
+        let pair = _map_pair(entry[1], entry[0]);
         result = push(result, pair);
         i = i + 1;
     }
@@ -194,7 +212,7 @@ fn map_count(arr) {
     return result;
 }
 
-// Convert map to string representation
+// Convert map to string
 fn map_to_string(m) {
     let result = "{";
     let i = 0;
@@ -202,7 +220,8 @@ fn map_to_string(m) {
         if (i > 0) {
             result = result + ", ";
         }
-        result = result + m[i][0] + ": " + m[i][1];
+        let entry = m[i];
+        result = result + entry[0] + ": " + entry[1];
         i = i + 1;
     }
     return result + "}";

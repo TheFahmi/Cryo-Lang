@@ -7,7 +7,8 @@
 
 // Create empty set
 fn set_new() {
-    return [];
+    let s = [];
+    return s;
 }
 
 // Create set from array (removes duplicates)
@@ -66,7 +67,7 @@ fn set_remove(s, elem) {
     return result;
 }
 
-// Union of two sets (A ∪ B)
+// Union of two sets (A + B)
 fn set_union(s1, s2) {
     let result = s1;
     let i = 0;
@@ -79,7 +80,7 @@ fn set_union(s1, s2) {
     return result;
 }
 
-// Intersection of two sets (A ∩ B)
+// Intersection of two sets (A & B)
 fn set_intersection(s1, s2) {
     let result = [];
     let i = 0;
@@ -105,7 +106,7 @@ fn set_difference(s1, s2) {
     return result;
 }
 
-// Symmetric difference (A △ B) = (A - B) ∪ (B - A)
+// Symmetric difference (A xor B)
 fn set_symmetric_difference(s1, s2) {
     let diff1 = set_difference(s1, s2);
     let diff2 = set_difference(s2, s1);
@@ -145,7 +146,7 @@ fn set_equals(s1, s2) {
     return set_is_subset(s1, s2);
 }
 
-// Check if two sets are disjoint (no common elements)
+// Check if two sets are disjoint
 fn set_is_disjoint(s1, s2) {
     let i = 0;
     while (i < len(s1)) {
@@ -159,7 +160,8 @@ fn set_is_disjoint(s1, s2) {
 
 // Clear set
 fn set_clear() {
-    return [];
+    let s = [];
+    return s;
 }
 
 // Convert set to array
@@ -175,24 +177,7 @@ fn set_first(s) {
     return s[0];
 }
 
-// Pop and return first element
-fn set_pop(s) {
-    if (len(s) == 0) {
-        let result = [null, s];
-        return result;
-    }
-    let first = s[0];
-    let rest = [];
-    let i = 1;
-    while (i < len(s)) {
-        rest = push(rest, s[i]);
-        i = i + 1;
-    }
-    let result = [first, rest];
-    return result;
-}
-
-// Convert set to string representation
+// Convert set to string
 fn set_to_string(s) {
     let result = "{";
     let i = 0;

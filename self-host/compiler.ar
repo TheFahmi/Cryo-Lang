@@ -1433,6 +1433,9 @@ fn cg_gen_expr(cge_input: any) {
         else if (call_name == "write_file") { call_target = "argon_write_file"; }
         else if (call_name == "file_exists") { call_target = "argon_file_exists"; }
         else if (call_name == "get_args") { call_target = "argon_get_args"; }
+        else if (call_name == "char_from_code") { call_target = "argon_char_from_code"; }
+        else if (call_name == "exit") { call_target = "argon_exit"; }
+        else if (call_name == "get_env") { call_target = "argon_get_env"; }
         
         // Check if call_name is an Enum Variant Constructor
         // We iterate all collected enums to find matching variant
@@ -1840,6 +1843,9 @@ fn cg_gen_stmt(stmt: any) {
              else if (name == "write_file") { call_target = "argon_write_file"; }
              else if (name == "file_exists") { call_target = "argon_file_exists"; }
              else if (name == "get_args") { call_target = "argon_get_args"; }
+             else if (name == "char_from_code") { call_target = "argon_char_from_code"; }
+             else if (name == "exit") { call_target = "argon_exit"; }
+             else if (name == "get_env") { call_target = "argon_get_env"; }
              
              let arg_str = "";
              let i = 0;

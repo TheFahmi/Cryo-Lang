@@ -646,3 +646,41 @@ pub extern "C" fn argon_thread_id() -> i64 {
     let id = thread::current().id();
     from_int(format!("{:?}", id).len() as i64)
 }
+
+#[no_mangle]
+pub extern "C" fn argon_char_from_code(code: i64) -> i64 {
+    let c = to_int(code) as u8 as char;
+    let s = c.to_string();
+    let cstr = std::ffi::CString::new(s).unwrap();
+    argon_str_new(cstr.as_ptr())
+}
+
+#[no_mangle]
+pub extern "C" fn argon_exit(code: i64) -> i64 {
+    std::process::exit(to_int(code) as i32);
+}
+
+#[no_mangle]
+pub extern "C" fn argon_get_env(name: i64) -> i64 {
+    if is_ptr(name) {
+        unsafe {
+            let header = name as *mut ObjHeader;
+            if (*header).type_tag == OBJ_STRING {
+                let obj = name as *mut ObjString;
+                let key = &(*obj).data;
+                match std::env::var(key) {
+                    Ok(val) => {
+                        let cstr = std::ffi::CString::new(val).unwrap();
+                        return argon_str_new(cstr.as_ptr());
+                    },
+                    Err(_) => {
+                        let cstr = std::ffi::CString::new("").unwrap();
+                        return argon_str_new(cstr.as_ptr());
+                    }
+                }
+            }
+        }
+    }
+    let cstr = std::ffi::CString::new("").unwrap();
+    argon_str_new(cstr.as_ptr())
+}

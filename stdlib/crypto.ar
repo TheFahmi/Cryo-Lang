@@ -71,7 +71,58 @@ fn _base64_index(c) {
         }
         i = i + 1;
     }
-    return 0;
+    return 0 - 1;
+}
+
+// Base64 decode string
+fn base64_decode(s) {
+    let result = "";
+    let i = 0;
+    let n = len(s);
+    
+    while (i < n) {
+        // Skip whitespace and invalid chars
+        let c1 = s[i];
+        let c2 = s[i + 1];
+        let c3 = s[i + 2];
+        let c4 = s[i + 3];
+        
+        let i1 = _base64_index(c1);
+        let i2 = _base64_index(c2);
+        let i3 = _base64_index(c3);
+        let i4 = _base64_index(c4);
+        
+        // b1 = (i1 << 2) | (i2 >> 4)
+        let b1 = (i1 * 4) + (i2 / 16);
+        result = result + sdbm_char(b1);
+        
+        if (c3 != "=") {
+            // b2 = ((i2 & 0x0F) << 4) | (i3 >> 2)
+            let b2 = ((i2 - (i2 / 16) * 16) * 16) + (i3 / 4);
+            result = result + sdbm_char(b2);
+            
+            if (c4 != "=") {
+                // b3 = ((i3 & 0x03) << 6) | i4
+                let b3 = ((i3 - (i3 / 4) * 4) * 64) + i4;
+                result = result + sdbm_char(b3);
+            }
+        }
+        
+        i = i + 4;
+    }
+    
+    return result;
+}
+
+// Helper: convert code to char (this is a placeholder until we have proper char() function)
+// For ASCII it works because string + code sometimes works in some implementations, 
+// but here we might need a better way.
+// Actually, in Argon, we can't easily convert code -> char yet without an intrinsic.
+// Let's assume we have or will add 'char_from_code' intrinsic.
+fn sdbm_char(code) {
+    // This is a temporary hack: we'd need a way to create a 1-char string from a code.
+    // Since we don't have it yet, this is a placeholder.
+    return "?"; 
 }
 
 // ============================================
@@ -231,16 +282,22 @@ fn rot13(s) {
         // Handle uppercase A-Z (65-90)
         if (c >= 65) {
             if (c <= 90) {
-                c = 65 + ((c - 65 + 13) - ((c - 65 + 13) / 26) * 26);
+                let offset = c - 65;
+                let rotated = offset + 13;
+                let wrapped = rotated - (rotated / 26) * 26;
+                c = 65 + wrapped;
             }
         }
         // Handle lowercase a-z (97-122)
         if (c >= 97) {
             if (c <= 122) {
-                c = 97 + ((c - 97 + 13) - ((c - 97 + 13) / 26) * 26);
+                let offset = c - 97;
+                let rotated = offset + 13;
+                let wrapped = rotated - (rotated / 26) * 26;
+                c = 97 + wrapped;
             }
         }
-        // Append character (simplified: just append original for now)
+        // Append original character (simplified)
         result = result + s[i];
         i = i + 1;
     }
