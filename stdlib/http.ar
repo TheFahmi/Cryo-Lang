@@ -326,17 +326,17 @@ fn http_index_of(s, sub) {
     }
     let i = 0;
     while (i <= s_len - sub_len) {
-        let match = true;
+        let is_match = true;
         let j = 0;
         while (j < sub_len) {
             if (s[i + j] != sub[j]) {
-                match = false;
+                is_match = false;
                 j = sub_len;
             } else {
                 j = j + 1;
             }
         }
-        if (match) {
+        if (is_match) {
             return i;
         }
         i = i + 1;

@@ -13,32 +13,38 @@ let JSON_OBJECT = 5;
 
 // Create JSON null
 fn json_null() {
-    return [JSON_NULL, null];
+    let res = [JSON_NULL, null];
+    return res;
 }
 
 // Create JSON boolean
 fn json_bool(val) {
-    return [JSON_BOOL, val];
+    let res = [JSON_BOOL, val];
+    return res;
 }
 
 // Create JSON number
 fn json_number(val) {
-    return [JSON_NUMBER, val];
+    let res = [JSON_NUMBER, val];
+    return res;
 }
 
 // Create JSON string
 fn json_string(val) {
-    return [JSON_STRING, val];
+    let res = [JSON_STRING, val];
+    return res;
 }
 
 // Create JSON array
 fn json_array(items) {
-    return [JSON_ARRAY, items];
+    let res = [JSON_ARRAY, items];
+    return res;
 }
 
 // Create JSON object (from list of key-value pairs)
 fn json_object(pairs) {
-    return [JSON_OBJECT, pairs];
+    let res = [JSON_OBJECT, pairs];
+    return res;
 }
 
 // Get JSON value type

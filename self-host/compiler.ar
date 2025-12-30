@@ -1824,6 +1824,23 @@ fn cg_gen_stmt(stmt: any) {
              let name = expr[1];
              let args = expr[2];
              
+             // Map intrinsics (same as in cg_gen_expr)
+             let call_target = name;
+             if (name == "len") { call_target = "argon_len"; }
+             else if (name == "push") { call_target = "argon_push"; }
+             else if (name == "charCodeAt") { call_target = "argon_char_code_at"; }
+             else if (name == "parseInt") { call_target = "argon_parse_int"; }
+             else if (name == "readFile") { call_target = "argon_read_file"; }
+             else if (name == "writeFile") { call_target = "argon_write_file"; }
+             else if (name == "fileExists") { call_target = "argon_file_exists"; }
+             else if (name == "getArgs") { call_target = "argon_get_args"; }
+             else if (name == "char_code_at") { call_target = "argon_char_code_at"; }
+             else if (name == "parse_int") { call_target = "argon_parse_int"; }
+             else if (name == "read_file") { call_target = "argon_read_file"; }
+             else if (name == "write_file") { call_target = "argon_write_file"; }
+             else if (name == "file_exists") { call_target = "argon_file_exists"; }
+             else if (name == "get_args") { call_target = "argon_get_args"; }
+             
              let arg_str = "";
              let i = 0;
              while (i < len(args)) {
@@ -1835,7 +1852,7 @@ fn cg_gen_stmt(stmt: any) {
              }
              
              let res = cg_next_temp();
-             cg_emit(res + " = tail call i64 @" + name + "(" + arg_str + ")");
+             cg_emit(res + " = tail call i64 @" + call_target + "(" + arg_str + ")");
              cg_emit("ret i64 " + res);
              return;
         }
@@ -2168,7 +2185,7 @@ fn cg_generate(cg_input_nodes: any) {
             // DEBUG
             
             if (fn_name == "main") {
-                cg_emit_raw("define i32 @main(i32 %argc, i8** %argv) {");
+                cg_emit_raw("define i64 @main(i32 %argc, i8** %argv) {");
                 cg_emit_raw("entry:");
                 
                 // Call globals init
@@ -2182,7 +2199,7 @@ fn cg_generate(cg_input_nodes: any) {
                     cg_gen_stmt(main_stmts[mj]);
                     mj = mj + 1;
                 }
-                cg_emit("ret i32 0");
+                cg_emit("ret i64 0");
                 cg_emit_raw("}");
             } else {
                 let fn_param_str = cg_gen_param_str(fn_params);
