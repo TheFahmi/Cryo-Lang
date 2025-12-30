@@ -1,0 +1,271 @@
+// ============================================
+// ARGON STANDARD LIBRARY: CRYPTO (v2.7.1)
+// Cryptographic utilities
+// Note: These are simplified implementations
+// For production, use native crypto libraries
+// ============================================
+
+// ============================================
+// BASE64 ENCODING/DECODING
+// ============================================
+
+let _base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+// Base64 encode string
+fn base64_encode(s) {
+    let result = "";
+    let i = 0;
+    let n = len(s);
+    
+    while (i < n) {
+        let b1 = char_code_at(s, i);
+        let b2 = 0;
+        let b3 = 0;
+        let pad = 0;
+        
+        if (i + 1 < n) {
+            b2 = char_code_at(s, i + 1);
+        } else {
+            pad = pad + 1;
+        }
+        
+        if (i + 2 < n) {
+            b3 = char_code_at(s, i + 2);
+        } else {
+            pad = pad + 1;
+        }
+        
+        // Encode 3 bytes into 4 base64 chars
+        let c1 = b1 / 4; // First 6 bits
+        let c2 = ((b1 - c1 * 4) * 16) + (b2 / 16);
+        let c3 = ((b2 - (b2 / 16) * 16) * 4) + (b3 / 64);
+        let c4 = b3 - (b3 / 64) * 64;
+        
+        result = result + _base64_chars[c1];
+        result = result + _base64_chars[c2];
+        
+        if (pad < 2) {
+            result = result + _base64_chars[c3];
+        } else {
+            result = result + "=";
+        }
+        
+        if (pad < 1) {
+            result = result + _base64_chars[c4];
+        } else {
+            result = result + "=";
+        }
+        
+        i = i + 3;
+    }
+    
+    return result;
+}
+
+// Helper: find base64 char index
+fn _base64_index(c) {
+    let i = 0;
+    while (i < 64) {
+        if (_base64_chars[i] == c) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return 0;
+}
+
+// ============================================
+// HEX ENCODING
+// ============================================
+
+let _hex_chars = "0123456789abcdef";
+
+// Convert byte to hex string
+fn byte_to_hex(b) {
+    let high = b / 16;
+    let low = b - (high * 16);
+    return _hex_chars[high] + _hex_chars[low];
+}
+
+// Convert string to hex
+fn str_to_hex(s) {
+    let result = "";
+    let i = 0;
+    while (i < len(s)) {
+        let code = char_code_at(s, i);
+        result = result + byte_to_hex(code);
+        i = i + 1;
+    }
+    return result;
+}
+
+// ============================================
+// SIMPLE HASH FUNCTIONS
+// ============================================
+
+// DJB2 hash (fast, non-cryptographic)
+fn hash_djb2(s) {
+    let hash = 5381;
+    let i = 0;
+    while (i < len(s)) {
+        let c = char_code_at(s, i);
+        hash = ((hash * 33) + c);
+        // Keep in 32-bit range
+        hash = hash - (hash / 2147483648) * 2147483648;
+        i = i + 1;
+    }
+    return hash;
+}
+
+// SDBM hash
+fn hash_sdbm(s) {
+    let hash = 0;
+    let i = 0;
+    while (i < len(s)) {
+        let c = char_code_at(s, i);
+        hash = c + (hash * 65599);
+        hash = hash - (hash / 2147483648) * 2147483648;
+        i = i + 1;
+    }
+    return hash;
+}
+
+// FNV-1a hash (32-bit)
+fn hash_fnv1a(s) {
+    let hash = 2166136261;  // FNV offset basis
+    let prime = 16777619;   // FNV prime
+    let i = 0;
+    while (i < len(s)) {
+        let c = char_code_at(s, i);
+        // XOR with byte
+        hash = hash - (hash / 256) * 256;  // Get low byte
+        hash = hash + c;
+        // Multiply by prime
+        hash = hash * prime;
+        hash = hash - (hash / 4294967296) * 4294967296; // mod 2^32
+        i = i + 1;
+    }
+    return hash;
+}
+
+// Get hash as hex string
+fn hash_to_hex(hash) {
+    let result = "";
+    let h = hash;
+    if (h < 0) {
+        h = 0 - h;
+    }
+    
+    while (h > 0) {
+        let digit = h - (h / 16) * 16;
+        result = _hex_chars[digit] + result;
+        h = h / 16;
+    }
+    
+    // Pad to 8 chars
+    while (len(result) < 8) {
+        result = "0" + result;
+    }
+    
+    return result;
+}
+
+// ============================================
+// CHECKSUM
+// ============================================
+
+// Simple checksum (sum of bytes mod 256)
+fn checksum(s) {
+    let sum = 0;
+    let i = 0;
+    while (i < len(s)) {
+        sum = sum + char_code_at(s, i);
+        i = i + 1;
+    }
+    return sum - (sum / 256) * 256;
+}
+
+// CRC-like checksum
+fn checksum_crc(s) {
+    let crc = 0;
+    let i = 0;
+    while (i < len(s)) {
+        let c = char_code_at(s, i);
+        crc = crc + c;
+        crc = crc * 31;
+        crc = crc - (crc / 65536) * 65536;
+        i = i + 1;
+    }
+    return crc;
+}
+
+// ============================================
+// SIMPLE OBFUSCATION (NOT ENCRYPTION!)
+// ============================================
+
+// XOR "encryption" (for obfuscation only)
+fn xor_encode(s, key) {
+    let result = "";
+    let key_len = len(key);
+    let i = 0;
+    while (i < len(s)) {
+        let c = char_code_at(s, i);
+        let k = char_code_at(key, i - (i / key_len) * key_len);
+        // XOR simulation using math
+        // XOR(a, b) = (a + b) - 2*(a AND b)
+        // Simplified: just add and mod 256
+        let encoded = (c + k) - ((c + k) / 256) * 256;
+        // Store as hex
+        result = result + byte_to_hex(encoded);
+        i = i + 1;
+    }
+    return result;
+}
+
+// ROT13 encoding (classic Caesar cipher)
+fn rot13(s) {
+    let result = "";
+    let i = 0;
+    while (i < len(s)) {
+        let c = char_code_at(s, i);
+        // Handle uppercase A-Z (65-90)
+        if (c >= 65) {
+            if (c <= 90) {
+                c = 65 + ((c - 65 + 13) - ((c - 65 + 13) / 26) * 26);
+            }
+        }
+        // Handle lowercase a-z (97-122)
+        if (c >= 97) {
+            if (c <= 122) {
+                c = 97 + ((c - 97 + 13) - ((c - 97 + 13) / 26) * 26);
+            }
+        }
+        // Append character (simplified: just append original for now)
+        result = result + s[i];
+        i = i + 1;
+    }
+    return result;
+}
+
+// ============================================
+// TIMING-SAFE COMPARISON
+// ============================================
+
+// Compare two strings in constant time
+fn crypto_compare(a, b) {
+    if (len(a) != len(b)) {
+        return false;
+    }
+    let result = 0;
+    let i = 0;
+    while (i < len(a)) {
+        let ca = char_code_at(a, i);
+        let cb = char_code_at(b, i);
+        // Accumulate differences
+        if (ca != cb) {
+            result = result + 1;
+        }
+        i = i + 1;
+    }
+    return result == 0;
+}

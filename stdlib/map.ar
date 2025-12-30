@@ -1,0 +1,209 @@
+// ============================================
+// ARGON STANDARD LIBRARY: MAP (v2.7.1)
+// HashMap/Dictionary implementation
+// Uses simple linear search (for small maps)
+// ============================================
+
+// Map is represented as [[key1, val1], [key2, val2], ...]
+
+// Create empty map
+fn map_new() {
+    return [];
+}
+
+// Get number of entries
+fn map_size(m) {
+    return len(m);
+}
+
+// Check if map is empty
+fn map_is_empty(m) {
+    return len(m) == 0;
+}
+
+// Check if key exists
+fn map_has(m, key) {
+    let i = 0;
+    while (i < len(m)) {
+        if (m[i][0] == key) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+// Get value by key (returns null if not found)
+fn map_get(m, key) {
+    let i = 0;
+    while (i < len(m)) {
+        if (m[i][0] == key) {
+            return m[i][1];
+        }
+        i = i + 1;
+    }
+    return null;
+}
+
+// Get value by key with default
+fn map_get_or(m, key, default_val) {
+    let i = 0;
+    while (i < len(m)) {
+        if (m[i][0] == key) {
+            return m[i][1];
+        }
+        i = i + 1;
+    }
+    return default_val;
+}
+
+// Set key-value pair (returns new map)
+fn map_set(m, key, value) {
+    let result = [];
+    let found = false;
+    let i = 0;
+    
+    while (i < len(m)) {
+        if (m[i][0] == key) {
+            // Update existing
+            let pair = [key, value];
+            result = push(result, pair);
+            found = true;
+        } else {
+            result = push(result, m[i]);
+        }
+        i = i + 1;
+    }
+    
+    if (found == false) {
+        // Add new
+        let pair = [key, value];
+        result = push(result, pair);
+    }
+    
+    return result;
+}
+
+// Remove key (returns new map)
+fn map_remove(m, key) {
+    let result = [];
+    let i = 0;
+    while (i < len(m)) {
+        if (m[i][0] != key) {
+            result = push(result, m[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Get all keys
+fn map_keys(m) {
+    let result = [];
+    let i = 0;
+    while (i < len(m)) {
+        result = push(result, m[i][0]);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Get all values
+fn map_values(m) {
+    let result = [];
+    let i = 0;
+    while (i < len(m)) {
+        result = push(result, m[i][1]);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Get all entries as [[key, val], ...]
+fn map_entries(m) {
+    return m;
+}
+
+// Clear map
+fn map_clear() {
+    return [];
+}
+
+// Merge two maps (second overwrites first)
+fn map_merge(m1, m2) {
+    let result = m1;
+    let i = 0;
+    while (i < len(m2)) {
+        result = map_set(result, m2[i][0], m2[i][1]);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Create map from arrays of keys and values
+fn map_from_arrays(keys, values) {
+    let result = [];
+    let i = 0;
+    let n = len(keys);
+    if (len(values) < n) {
+        n = len(values);
+    }
+    while (i < n) {
+        let pair = [keys[i], values[i]];
+        result = push(result, pair);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Filter map entries
+fn map_filter_by_value(m, value) {
+    let result = [];
+    let i = 0;
+    while (i < len(m)) {
+        if (m[i][1] == value) {
+            result = push(result, m[i]);
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+// Invert map (swap keys and values)
+fn map_invert(m) {
+    let result = [];
+    let i = 0;
+    while (i < len(m)) {
+        let pair = [m[i][1], m[i][0]];
+        result = push(result, pair);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Count occurrences in array
+fn map_count(arr) {
+    let result = [];
+    let i = 0;
+    while (i < len(arr)) {
+        let key = arr[i];
+        let count = map_get_or(result, key, 0);
+        result = map_set(result, key, count + 1);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Convert map to string representation
+fn map_to_string(m) {
+    let result = "{";
+    let i = 0;
+    while (i < len(m)) {
+        if (i > 0) {
+            result = result + ", ";
+        }
+        result = result + m[i][0] + ": " + m[i][1];
+        i = i + 1;
+    }
+    return result + "}";
+}
