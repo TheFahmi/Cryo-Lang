@@ -191,6 +191,7 @@ fn main() {
 - **Node.js** (optional): For LSP/VS Code extension
 
 ## Version History
+- **v2.17.0**: Debugger support (DWARF debug info, GDB integration, -g flag)
 - **v2.16.0**: Generic types with full monomorphization, fixed duplicate function bug, Rust interpreter bootstrap
 - **v2.15.0**: Generic type syntax support (`struct Box<T>`, `fn map<T>`)
 - **v2.14.1**: REPL interactive mode, system(), input() functions
@@ -223,4 +224,6 @@ fn main() {
 - [x] LSP (Language Server Protocol) ✅
 - [x] REPL (interactive mode) ✅
 - [x] Generic types (`Box<T>`, `fn<T>`) ✅
-- [ ] Debugger support
+- [x] Debugger support (GDB/LLDB) ✅
+- [ ] Async/await
+- [ ] WebAssembly target
