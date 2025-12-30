@@ -6,6 +6,8 @@
 // ============================================
 
 let OPT_UNSAFE = 0; // Optimization flag
+let DEBUG_MODE = 0; // Debug info flag (-g)
+let DBG_FILENAME = ""; // Current source filename for debug
 
 // =================== GENERICS (Phase 2) ===================
 // Storage for generic function templates
@@ -176,14 +178,17 @@ fn is_whitespace(c: string) {
     return false;
 }
 
-// Token structure: [type, value]
+// Token structure: [type, value, line]
+let tok_line = 1;  // Current line number for debug info
+
 fn make_token(typ: int, val: string) {
-    return [typ, val];
+    return [typ, val, tok_line];
 }
 
 fn tokenize(source: string) {
     let tokens = [];
     let pos = 0;
+    tok_line = 1;  // Reset line counter
     let n = len(source);
     
     while (pos < n) {
@@ -191,6 +196,9 @@ fn tokenize(source: string) {
         
         // Skip whitespace
         if (is_whitespace(c)) {
+            if (c == "\n") {
+                tok_line = tok_line + 1;
+            }
             pos = pos + 1;
         }
         // Skip comments
@@ -203,6 +211,7 @@ fn tokenize(source: string) {
                     while (in_comment == 1) {
                         if (pos < n) {
                             if (source[pos] == "\n") {
+                                tok_line = tok_line + 1;
                                 pos = pos + 1;
                                 in_comment = 0;
                             } else {
@@ -2511,7 +2520,19 @@ fn cg_generate(cg_input_nodes: any) {
     
     cg_emit_raw(globals_decl);
     
-
+    // 4b. Debug Metadata (if -g flag)
+    if (DEBUG_MODE == 1) {
+        cg_emit_raw("");
+        cg_emit_raw("; Debug Metadata");
+        cg_emit_raw("!llvm.dbg.cu = !{!0}");
+        cg_emit_raw("!llvm.module.flags = !{!1, !2}");
+        cg_emit_raw("!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: \"argonc v2.16.0\", isOptimized: false, emissionKind: FullDebug)");
+        cg_emit_raw("!1 = !{i32 2, !\"Dwarf Version\", i32 4}");
+        cg_emit_raw("!2 = !{i32 2, !\"Debug Info Version\", i32 3}");
+        cg_emit_raw("!3 = !DIFile(filename: \"" + DBG_FILENAME + "\", directory: \".\")");
+        cg_emit_raw("!4 = !DIBasicType(name: \"int\", size: 64, encoding: DW_ATE_signed)");
+        cg_emit_raw("");
+    }
     
     // 5. String Constants
     i = 0;
@@ -2682,8 +2703,13 @@ fn main() {
         let arg = args[i];
         if (arg == "--unsafe-math") {
             OPT_UNSAFE = 1;
+        } else if (arg == "-g") {
+            DEBUG_MODE = 1;
+        } else if (arg == "--debug") {
+            DEBUG_MODE = 1;
         } else {
             target_file = arg;
+            DBG_FILENAME = arg;  // Store for debug metadata
         }
         i = i + 1;
     }

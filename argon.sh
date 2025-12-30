@@ -110,8 +110,14 @@ fi
 
 # 1. Compile (Build)
 # Mounts current dir to /src, compiles with argonc, links with clang
+DEBUG_FLAG=""
+CLANG_DEBUG=""
+if [ "$COMMAND" == "debug" ]; then
+    DEBUG_FLAG="-g"
+    CLANG_DEBUG="-g"
+fi
 docker run --rm -v "${HOST_PWD}:/src" -w //src argon-toolchain \
-    bash -c "argonc $FLAG $FILE && clang++ -O0 -Wno-override-module ${FILE}.ll /usr/lib/libruntime_argon.a -o ${FILE}.out -lpthread -ldl"
+    bash -c "argonc $DEBUG_FLAG $FLAG $FILE && clang++ $CLANG_DEBUG -O0 -Wno-override-module ${FILE}.ll /usr/lib/libruntime_argon.a -o ${FILE}.out -lpthread -ldl"
 
 EXIT_CODE=$?
 
@@ -126,4 +132,10 @@ echo ">> Build Complete: ${FILE}.out"
 if [ "$COMMAND" == "run" ]; then
     echo ">> Running..."
     docker run --rm -v "${HOST_PWD}:/src" -w //src argon-toolchain ./${FILE}.out
+fi
+
+# 3. Debug (if requested)
+if [ "$COMMAND" == "debug" ]; then
+    echo ">> Starting GDB debugger..."
+    docker run --rm -it -v "${HOST_PWD}:/src" -w //src argon-toolchain gdb ./${FILE}.out
 fi
