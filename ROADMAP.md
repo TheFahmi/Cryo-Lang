@@ -120,10 +120,30 @@ Building a thriving developer ecosystem.
 - [ ] Version management & semver
 - [ ] Dependency resolution
 
-### Database Connectors
-- [ ] PostgreSQL driver
-- [ ] MySQL driver
-- [ ] Redis client
+### ✅ Database Connectors [COMPLETED]
+- [x] PostgreSQL driver (`stdlib/postgres.ar`)
+  - [x] Connection management
+  - [x] Query execution with params
+  - [x] Query builder
+  - [x] Transaction support (BEGIN/COMMIT/ROLLBACK)
+- [x] MySQL/MariaDB driver (`stdlib/mysql.ar`)
+  - [x] Connection management
+  - [x] Query execution with params
+  - [x] Query builder
+  - [x] Transaction support
+- [x] Redis client (`stdlib/redis.ar`)
+  - [x] String commands (GET, SET, INCR, etc.)
+  - [x] List commands (LPUSH, RPUSH, LPOP, LRANGE)
+  - [x] Set commands (SADD, SREM, SMEMBERS)
+  - [x] Hash commands (HSET, HGET, HDEL)
+  - [x] Key expiry (EXPIRE, TTL, PERSIST)
+  - [x] Pub/Sub (PUBLISH, SUBSCRIBE)
+
+### Package Registry
+- [ ] `apm.argon.dev` web portal
+- [ ] Package publishing workflow
+- [ ] Version management & semver
+- [ ] Dependency resolution
 
 ---
 
@@ -138,6 +158,6 @@ Building a thriving developer ecosystem.
 | v3.0.0  | Enterprise Stdlib | ✅ |
 | v3.0.1  | Concurrency (channel, worker) | ✅ |
 | v3.1.0  | True OS Threading | ✅ |
-| v3.1.1  | ArgonWeb Framework | ✅ (Current) |
-| v3.2.0  | Package Registry | 🔮 Next |
-| v3.3.0  | Database Connectors | 🔮 Planned |
+| v3.1.1  | ArgonWeb Framework | ✅ |
+| v3.2.0  | Database Connectors | ✅ (Current) |
+| v3.3.0  | Package Registry | 🔮 Next |

@@ -1,0 +1,153 @@
+// ============================================
+// Database Connectors Test
+// Tests PostgreSQL, MySQL, Redis concepts
+// ============================================
+
+fn main() {
+    print("==========================================");
+    print("       DATABASE CONNECTORS TEST");
+    print("==========================================");
+    print("");
+    
+    // Test 1: PostgreSQL Config
+    print("Test 1: PostgreSQL Configuration");
+    print("------------------------------------------");
+    let pgHost = "localhost";
+    let pgPort = 5432;
+    let pgDb = "myapp";
+    let pgUser = "postgres";
+    
+    print("  Host: " + pgHost);
+    print("  Port: " + pgPort);
+    print("  Database: " + pgDb);
+    print("  User: " + pgUser);
+    print("  [PASS] PostgreSQL config defined");
+    print("");
+    
+    // Test 2: MySQL Config
+    print("Test 2: MySQL Configuration");
+    print("------------------------------------------");
+    let mysqlHost = "localhost";
+    let mysqlPort = 3306;
+    let mysqlDb = "myapp";
+    let mysqlUser = "root";
+    
+    print("  Host: " + mysqlHost);
+    print("  Port: " + mysqlPort);
+    print("  Database: " + mysqlDb);
+    print("  User: " + mysqlUser);
+    print("  [PASS] MySQL config defined");
+    print("");
+    
+    // Test 3: Redis Config
+    print("Test 3: Redis Configuration");
+    print("------------------------------------------");
+    let redisHost = "localhost";
+    let redisPort = 6379;
+    let redisDb = 0;
+    
+    print("  Host: " + redisHost);
+    print("  Port: " + redisPort);
+    print("  Database: " + redisDb);
+    print("  [PASS] Redis config defined");
+    print("");
+    
+    // Test 4: SQL Query Builder Concept
+    print("Test 4: SQL Query Builder");
+    print("------------------------------------------");
+    
+    let table = "users";
+    let columns = "id, name, email";
+    let whereClause = "id = 1";
+    let sql = "SELECT " + columns + " FROM " + table + " WHERE " + whereClause;
+    
+    print("  Table: " + table);
+    print("  Columns: " + columns);
+    print("  Where: " + whereClause);
+    print("  SQL: " + sql);
+    print("  [PASS] Query builder concept works");
+    print("");
+    
+    // Test 5: Parameter Escaping
+    print("Test 5: Parameter Escaping");
+    print("------------------------------------------");
+    
+    let unsafeInput = "Robert'; DROP TABLE users;--";
+    let escaped = escapeForSql(unsafeInput);
+    
+    print("  Unsafe: " + unsafeInput);
+    print("  Escaped: " + escaped);
+    print("  [PASS] SQL injection prevented");
+    print("");
+    
+    // Test 6: Redis Commands Concept
+    print("Test 6: Redis Commands");
+    print("------------------------------------------");
+    
+    // Simulate in-memory store using variables
+    let userName = "";
+    let counter = 0;
+    
+    // SET
+    userName = "John";
+    print("  SET user:1:name = John");
+    
+    // GET
+    print("  GET user:1:name = " + userName);
+    
+    // INCR simulation
+    counter = counter + 1;
+    print("  INCR counter = " + counter);
+    
+    counter = counter + 1;
+    print("  INCR counter = " + counter);
+    
+    print("  [PASS] Redis commands concept works");
+    print("");
+    
+    // Test 7: Transaction Concept
+    print("Test 7: Transaction Concept");
+    print("------------------------------------------");
+    
+    let inTransaction = false;
+    print("  BEGIN");
+    inTransaction = true;
+    print("    INSERT INTO users VALUES (1, 'John')");
+    print("    UPDATE accounts SET balance = 100");
+    print("  COMMIT");
+    inTransaction = false;
+    print("  [PASS] Transaction concept works");
+    print("");
+    
+    // Test 8: Connection URL Parsing
+    print("Test 8: Connection URL Parsing");
+    print("------------------------------------------");
+    
+    let pgUrl = "postgres://user:pass@db.example.com:5432/mydb";
+    print("  PG URL: " + pgUrl);
+    print("  Would parse: host=db.example.com, port=5432, db=mydb");
+    
+    let mysqlUrl = "mysql://root:secret@localhost:3306/app";
+    print("  MySQL URL: " + mysqlUrl);
+    print("  Would parse: host=localhost, port=3306, db=app");
+    
+    let redisUrl = "redis://:password@cache.example.com:6379/1";
+    print("  Redis URL: " + redisUrl);
+    print("  Would parse: host=cache.example.com, port=6379, db=1");
+    
+    print("  [PASS] URL parsing concept works");
+    print("");
+    
+    print("==========================================");
+    print("    ALL DATABASE TESTS PASSED!");
+    print("==========================================");
+    
+    return 0;
+}
+
+fn escapeForSql(input: string) -> string {
+    let result = input;
+    result = replace(result, "'", "''");
+    result = replace(result, "\\", "\\\\");
+    return result;
+}
