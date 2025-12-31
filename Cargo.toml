@@ -1,0 +1,16 @@
+[package]
+name = "argon"
+version = "2.19.0"
+edition = "2021"
+description = "Argon Language Interpreter - Compiles Argon to LLVM IR"
+authors = ["TheFahmi"]
+
+[dependencies]
+
+[[bin]]
+name = "argon"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
