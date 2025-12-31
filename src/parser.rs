@@ -47,6 +47,13 @@ pub struct Param {
     pub typ: Option<String>,
 }
 
+/// Decorator for NestJS-style annotations
+#[derive(Debug, Clone)]
+pub struct Decorator {
+    pub name: String,
+    pub arg: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,
@@ -54,12 +61,14 @@ pub struct Function {
     pub body: Option<Vec<Stmt>>, // Body is optional for traits/extern
     pub is_async: bool,
     pub return_type: Option<String>,
+    pub decorators: Vec<Decorator>, // @Get, @Post, etc.
 }
 
 #[derive(Debug, Clone)]
 pub struct StructDef {
     pub name: String,
     pub fields: Vec<(String, String)>,
+    pub decorators: Vec<Decorator>, // @Controller, @Injectable, etc.
 }
 
 #[derive(Debug, Clone)]
@@ -145,33 +154,64 @@ impl Parser {
         }
     }
     
+    fn collect_decorators(&mut self) -> Vec<Decorator> {
+        let mut decorators = Vec::new();
+        loop {
+            let token = self.peek().clone();
+            let decorator_opt = match token {
+                Token::DecController(arg) => Some(("Controller", arg)),
+                Token::DecGet(arg) => Some(("Get", arg)),
+                Token::DecPost(arg) => Some(("Post", arg)),
+                Token::DecPut(arg) => Some(("Put", arg)),
+                Token::DecDelete(arg) => Some(("Delete", arg)),
+                Token::DecPatch(arg) => Some(("Patch", arg)),
+                Token::DecInjectable => Some(("Injectable", "".to_string())),
+                Token::DecModule => Some(("Module", "".to_string())),
+                Token::DecBody => Some(("Body", "".to_string())),
+                Token::DecParam(arg) => Some(("Param", arg)),
+                Token::DecQuery(arg) => Some(("Query", arg)),
+                Token::DecGuard(arg) => Some(("Guard", arg)),
+                Token::DecMiddleware(arg) => Some(("Middleware", arg)),
+                
+                Token::At | Token::WasmExport | Token::WasmImport => {
+                    self.advance();
+                    if self.peek() == &Token::LParen {
+                        self.advance();
+                        while self.peek() != &Token::RParen && self.peek() != &Token::Eof {
+                            self.advance();
+                        }
+                        self.advance();
+                    }
+                    None
+                }
+                _ => break,
+            };
+
+            if let Some((name, arg)) = decorator_opt {
+                decorators.push(Decorator { name: name.to_string(), arg });
+                self.advance();
+            }
+        }
+        decorators
+    }
+    
     pub fn parse(&mut self) -> Result<Vec<TopLevel>, String> {
         let mut items = Vec::new();
         
         while self.peek() != &Token::Eof {
-            // Skip attributes for now
-            while matches!(self.peek(), Token::At | Token::WasmExport | Token::WasmImport) {
-                self.advance();
-                // Skip attribute args if present
-                if self.peek() == &Token::LParen {
-                    self.advance();
-                    while self.peek() != &Token::RParen && self.peek() != &Token::Eof {
-                        self.advance();
-                    }
-                    self.advance();
-                }
-            }
+            let decorators = self.collect_decorators();
             
             match self.peek() {
                 Token::Fn | Token::Async => {
-                    items.push(TopLevel::Function(self.parse_function()?));
+                    items.push(TopLevel::Function(self.parse_function_with_decorators(decorators)?));
                 }
                 Token::Struct => {
-                    items.push(TopLevel::Struct(self.parse_struct()?));
+                    items.push(TopLevel::Struct(self.parse_struct_with_decorators(decorators)?));
                 }
                 Token::Enum => {
                     items.push(TopLevel::Enum(self.parse_enum()?));
                 }
+                // ... rest of match arms need to be preserved/modified if decorators apply
                 Token::Let => {
                     let (name, expr) = self.parse_global_let()?;
                     items.push(TopLevel::Let(name, expr));
@@ -192,12 +232,10 @@ impl Parser {
                 Token::Macro => {
                     items.push(TopLevel::Macro(self.parse_macro()?));
                 }
-                Token::Eof => break,
-                _ => {
-                    self.advance();
-                }
+                _ => return Err(format!("Unexpected token at top level: {:?}", self.peek())),
             }
         }
+
         
         Ok(items)
     }
@@ -232,6 +270,10 @@ impl Parser {
     }
     
     fn parse_function(&mut self) -> Result<Function, String> {
+        self.parse_function_with_decorators(vec![])
+    }
+    
+    fn parse_function_with_decorators(&mut self, decorators: Vec<Decorator>) -> Result<Function, String> {
         let is_async = self.match_token(&Token::Async);
         self.expect(Token::Fn)?;
         
@@ -285,6 +327,7 @@ impl Parser {
             body,
             is_async,
             return_type,
+            decorators,
         })
     }
     
@@ -356,7 +399,8 @@ impl Parser {
         self.expect(Token::LBrace)?;
         let mut methods = Vec::new();
         while self.peek() != &Token::RBrace {
-            methods.push(self.parse_function()?);
+            let decorators = self.collect_decorators();
+            methods.push(self.parse_function_with_decorators(decorators)?);
         }
         self.expect(Token::RBrace)?;
         
@@ -393,6 +437,10 @@ impl Parser {
         Err("Expected fn or block after extern".to_string())
     }
     fn parse_struct(&mut self) -> Result<StructDef, String> {
+        self.parse_struct_with_decorators(vec![])
+    }
+
+    fn parse_struct_with_decorators(&mut self, decorators: Vec<Decorator>) -> Result<StructDef, String> {
         self.expect(Token::Struct)?;
         let name = match self.advance() {
             Token::Identifier(s) => s,
@@ -424,7 +472,7 @@ impl Parser {
         }
         self.expect(Token::RBrace)?;
         
-        Ok(StructDef { name, fields })
+        Ok(StructDef { name, fields, decorators })
     }
     
     fn parse_enum(&mut self) -> Result<EnumDef, String> {

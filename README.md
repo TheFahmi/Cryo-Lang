@@ -8,6 +8,14 @@
   <strong>Version 3.1.0</strong> | High-Performance Systems Programming Language
 </p>
 
+<p align="center">
+  <a href="http://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/Argon-v3.1.0-crimson?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/build-passing-brightgreen?style=flat-square" alt="Build Status">
+  <img src="https://img.shields.io/badge/platform-win%20%7C%20linux%20%7C%20macos-lightgrey?style=flat-square" alt="Platform">
+</p>
+
 ---
 
 Argon is a self-hosted, high-performance systems programming language designed for modern development. Since v3.1.0, Argon uses **native compilation by default** for maximum performance, achieving near C++ speeds.
@@ -515,7 +523,7 @@ Install the Argon extension from the `lsp/vscode-extension` directory.
 
 | Version | Release | Key Features |
 |---------|---------|--------------|
-| v3.1.0 | 2026-01 | Native mode default, AI agent documentation |
+| v3.1.0 | 2026-01 | Native mode default, Decorators support, AI agent documentation |
 | v3.0.0 | 2025-12 | LSP, Debugger, Bytecode VM, LLVM compilation |
 | v2.24.0 | 2025-11 | Macros, ArgonWeb CLI, Crypto module |
 | v2.23.0 | 2025-10 | Defer statement |

@@ -182,6 +182,21 @@ macro route(app, method, path, handler) {
 }
 ```
 
+### Decorators
+```javascript
+@Controller("/api/users")
+struct UsersController {
+    service: UserService
+}
+
+impl UsersController {
+    @Get("/:id")
+    fn get_user(self, id: i32) -> User {
+        return self.service.find_one(id);
+    }
+}
+```
+
 ## 🧪 Testing
 
 ```bash
@@ -219,6 +234,7 @@ docker run --rm argon-bench
    - `Expr::Identifier` (not `Expr::Ident`)
    - `Stmt::Let(name, type_opt, expr)` has 3 fields
    - `Stmt::Return(Option<Expr>)` - expr is optional
+   - `Function` and `StructDef` have `decorators` field
 
 3. **File Extensions**: Argon files use `.ar` extension.
 

@@ -1061,7 +1061,7 @@ impl Interpreter {
         } else {
             // Check if variable is a function
             match self.get_var(name) {
-                Value::Function(n, p, b) => Function { name: n, params: p, body: b, is_async: false, return_type: None },
+                Value::Function(n, p, b) => Function { name: n, params: p, body: b, is_async: false, return_type: None, decorators: vec![] },
                 _ => return Err(format!("Undefined function: {}", name)),
             }
         };

@@ -1,7 +1,7 @@
 // Comprehensive Argon v2.25.0 Standard Library Test
 
 fn main() {
-    print("=== Argon v2.25.0 Standard Library Tests ===");
+    print("=== Argon v3.1.0 Standard Library Tests ===\n");
     print("");
     
     // 1. Math Functions
