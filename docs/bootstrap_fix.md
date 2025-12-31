@@ -4,78 +4,34 @@
 
 | Versi | Binary | Status |
 |-------|--------|--------|
-| v2.16.0 | `argonc_v216` | ✅ Stable |
-| v2.18.0 | `argonc_v218` | ✅ In Docker (async/await) |
-| v2.19.0 | - | ⚠️ Source only (needs new interpreter) |
+| v2.18.0 | `argonc_v218` | ✅ Legacy (Linux) |
+| v2.19.0 | `argon_v219` | ✅ Bootstrapped via Rust |
+| v2.20.0 | `argon_v220` | ✅ Bootstrapped (FFI/Traits) |
 
 ---
 
-## Current Situation
+## Status Update: FIXED ✅
+
+The bootstrap issue has been resolved by rewriting the Rust interpreter from scratch.
 
 ### What Works ✅
-- **Docker image** builds successfully with `argonc_v218`
-- **All user programs** compile and run correctly
-- **Source code v2.19.0** is complete with WebAssembly support
-- **Examples** all work: `hello.ar`, `async_example.ar`, etc.
+- **New Rust Interpreter** (`src/`) fully supports compiler syntax (v2.20.0).
+- **Self-Hosting** works: Interpreter can run `self-host/compiler.ar`.
+- **WASM Support**: Interpreter enables WASM compilation target.
+- **FFI & Traits**: Interpreter supports parsing and running experimental syntax.
 
-### What Doesn't Work ❌
-- **v2.19.0 binary** cannot be bootstrapped
-- **Rust interpreter** (`argon`) is outdated and cannot parse any recent compiler source
-- **WASM target** is in source but not accessible without new binary
-
----
-
-## Why Bootstrap Fails
-
-The `argon` binary (Rust interpreter) in the repository is **very outdated**. It cannot parse:
-- v2.19.0 source (WebAssembly features)
-- v2.18.0 source (async/await)
-- v2.17.0 source (debugger)
-- v2.16.0 source (generics)
-
-Even the oldest recent version fails with parse errors.
-
----
-
-## Solution Required
-
-To enable full v2.19.0 bootstrap, we need to:
-
-### Option 1: Update Rust Interpreter Source
+### Bootstrap Process
 ```bash
-# Need to add Rust source to repo and update lexer/parser
-# to match current Argon syntax
-
-# Then rebuild interpreter:
+# 1. Build Rust Interpreter
 cargo build --release
-cp target/release/argon ./argon
+
+# 2. Run Compiler Source using Interpreter
+./target/release/argon self-host/compiler.ar examples/hello.ar
+
+# 3. Create Binary (Optional)
+# The rust interpreter acts as the universal binary now
+cp target/release/argon.exe argon_v220.exe
 ```
-
-### Option 2: Manual LLVM Generation
-If you have access to a working interpreter that can parse the source:
-```bash
-./working_argon self-host/compiler.ar
-# This overwrites compiler.ar with LLVM IR
-# Use inotifywait to capture before deletion
-```
-
-### Option 3: Continue with v2.18 Binary
-The current setup works fine for all practical purposes:
-```bash
-./argon.sh run examples/hello.ar
-./argon.sh build program.ar -o program
-```
-
----
-
-## Current Dockerfile
-
-```dockerfile
-# Uses pre-built argonc_v218 binary
-COPY self-host/argonc_v218 /usr/bin/argonc
-```
-
-This is the **only working solution** until the Rust interpreter is updated.
 
 ---
 
@@ -83,11 +39,10 @@ This is the **only working solution** until the Rust interpreter is updated.
 
 | File | Description |
 |------|-------------|
-| `argon` | Rust interpreter (OUTDATED - cannot parse recent source) |
-| `self-host/argonc_v218` | Compiled v2.18 binary (WORKS) |
-| `self-host/argonc_v216` | Compiled v2.16 binary (WORKS) |
-| `self-host/compiler.ar` | v2.19.0 source with WebAssembly |
-| `self-host/runtime.rs` | Runtime library source |
+| `argon_v220.exe` | Newest Rust Interpreter (Windows) |
+| `src/*` | Rust source code for interpreter (Lexer, Parser, AST, Interpreter) |
+| `self-host/compiler.ar` | Argon compiler source (v2.20.0) |
+| `examples/*` | Updated examples for FFI/Traits/WASM |
 
 ---
 
@@ -95,22 +50,6 @@ This is the **only working solution** until the Rust interpreter is updated.
 
 | Version | Features | Binary Available |
 |---------|----------|-----------------|
-| v2.19.0 | WebAssembly, WASM codegen | ❌ Source only |
+| v2.20.0 | FFI, Traits, Rust Interpreter rewrite | ✅ `argon_v220` |
+| v2.19.0 | WebAssembly, WASM codegen | ✅ `argon_v219` |
 | v2.18.0 | Async/await | ✅ `argonc_v218` |
-| v2.17.0 | Debugger support | (included in v218) |
-| v2.16.0 | Generic types | ✅ `argonc_v216` |
-
----
-
-## Quick Commands
-
-```bash
-# Build Docker image
-docker build -t argon-toolchain .
-
-# Run program
-docker run --rm -v //d/rust:/ws argon-toolchain bash -c "cd /ws; argonc examples/hello.ar"
-
-# Run compiled program  
-docker run --rm -v //d/rust:/ws argon-toolchain bash -c "cd /ws; clang examples/hello.ar.ll -o hello; ./hello"
-```
