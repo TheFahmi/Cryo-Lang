@@ -3,7 +3,7 @@
 // Much faster than self-hosted compiler.ar
 
 use crate::parser::{Parser, TopLevel, Stmt, Expr, Function};
-use crate::lexer::Lexer;
+use crate::lexer;
 
 pub struct Compiler {
     output: String,
@@ -26,8 +26,7 @@ impl Compiler {
     }
 
     pub fn compile(&mut self, source: &str) -> Result<String, String> {
-        let mut lexer = Lexer::new(source);
-        let tokens = lexer.tokenize();
+        let tokens = lexer::tokenize(source);
         let mut parser = Parser::new(tokens);
         let ast = parser.parse().map_err(|e| format!("Parse error: {}", e))?;
 
@@ -83,14 +82,18 @@ impl Compiler {
 
     fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
         match stmt {
-            Stmt::Let(name, expr) => {
+            Stmt::Let(name, _typ, expr) => {
                 self.output.push_str(&format!("  %{}.addr = alloca i64\n", name));
                 let val = self.compile_expr(expr)?;
                 self.output.push_str(&format!("  store i64 {}, i64* %{}.addr\n", val, name));
             }
-            Stmt::Return(expr) => {
-                let val = self.compile_expr(expr)?;
-                self.output.push_str(&format!("  ret i64 {}\n", val));
+            Stmt::Return(expr_opt) => {
+                if let Some(expr) = expr_opt {
+                    let val = self.compile_expr(expr)?;
+                    self.output.push_str(&format!("  ret i64 {}\n", val));
+                } else {
+                    self.output.push_str("  ret i64 0\n");
+                }
             }
             Stmt::If(cond, then_block, else_block) => {
                 let cond_val = self.compile_expr(cond)?;
@@ -131,8 +134,8 @@ impl Compiler {
         let tmp = format!("%t{}", self.func_counter);
 
         match expr {
-            Expr::Int(n) => Ok(format!("{}", n)),
-            Expr::Ident(name) => {
+            Expr::Number(n) => Ok(format!("{}", n)),
+            Expr::Identifier(name) => {
                 self.output.push_str(&format!("  {} = load i64, i64* %{}.addr\n", tmp, name));
                 Ok(tmp)
             }
