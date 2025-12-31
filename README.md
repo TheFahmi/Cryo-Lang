@@ -1,44 +1,100 @@
 # Argon Programming Language (v2.24.0)
-![Argon Logo](logo.png)
 
-Argon is a high-performance, **self-hosted** systems programming language that compiles directly to using custom Rust Interpreter.
+Argon is a high-performance, **self-hosted** systems programming language designed for modern development. It features a custom Rust-based interpreter, robust type system, and built-in tooling for building scalable applications.
 
-## ✨ Highlights
-- **Self-Hosted**: Compiler written in Argon itself (`self-host/compiler.ar`)
-- **Verified**: Stage 1 (self-compiled) produces identical output when compiling itself
-- **Native Backend**: Uses custom Rust-based interpreter/codegen for optimized execution
-- **Foreign Function Interface**: `extern "C"` support and raw pointers (`*i32`) (v2.20.0)
-- **Traits System**: Interface definitions (`trait`) and implementations (`impl Trait`) with polymorphism (v2.20.0)
-- **WebAssembly**: Compile to WASM for browser deployment (v2.19.0)
-- **Async/Await**: Asynchronous functions with `async fn` and `await` expressions (v2.18.0)
-- **Debugger**: Full GDB/LLDB support with DWARF debug info (v2.17.0)
-- **Generic Types**: Full support for `struct Box<T>`, `fn map<T>(...)` with monomorphization (v2.16.0)
-- **REPL**: Interactive mode for quick experimentation (v2.14.0)
-- **IDE Support**: VS Code extension with full Language Server Protocol (v2.0.0)
-- **Package Manager**: APM with registry, git deps, and lock files (v2.10.0)
-- **Standard Library**: 21 modules (math, string, array, async, wasm, collections, etc)
-- **Enums & Match**: Enum types with pattern matching (v2.6.0)
-- **Structs & Methods**: OO-like programming support (v2.5.0)
-- **Networking & Threads**: Built-in TCP Socket and Multi-threading support
+---
 
-## Quick Start
+## ✨ Features
+
+- **🚀 Performance**: Native backend with optimized custom interpreter.
+- **🛡️ Type System**: Traits (`trait`), Generics (`Func<T>`), Structs, Enums, and Static Analysis.
+- **⚡ Async/Await**: First-class support for asynchronous programming.
+- **🌐 Ecosystem**: Built-in Package Manager (APM), LSP for VS Code, and Project Scaffolding CLI.
+- **🔌 Interop**: FFI (`extern "C"`) and WebAssembly (WASM) compilation support.
+- **🧠 Modern**: Features `defer` for cleanup, hygienic macros, and pattern matching.
+- **🧵 Concurrency**: Built-in Multi-threading and TCP Networking.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Build the Compiler/Interpreter
+
 ```bash
-# Build Rust Interpreter (v2.24.0)
+# Build release binary
 cargo build --release
-# Copy binary
-cp target/release/argon.exe argon_v224.exe
 
-# Run Hello World
-./argon_v224.exe examples/hello.ar
-# Run FFI Example
-./argon_v220.exe examples/ffi_example.ar
-# Run Traits Example
-./argon_v220.exe examples/traits_example.ar
+# (Optional) Copy to system path or root
+cp target/release/argon.exe argon.exe
 ```
 
-## Language Features
+### 2. Run "Hello World"
 
-### Traits (v2.20.0)
+Create `hello.ar`:
+```javascript
+fn main() {
+    print("Hello, Argon!");
+}
+```
+
+Run it:
+```bash
+./argon.exe hello.ar
+```
+
+---
+
+## 🌐 ArgonWeb Ecosystem
+
+Argon comes with a powerful ecosystem for web development.
+
+### 1. ArgonWeb Framework
+A NestJS-inspired web framework is included in `examples/argon_web.ar`.
+
+### 2. ArgonWeb CLI
+Scaffold new projects instantly with our CLI tool.
+
+```bash
+# Generate a new REST API project
+./argonweb-cli.sh new my-api
+
+# Run the server
+cd my-api
+../argon.exe src/main.ar
+```
+
+**Generates a production-ready structure:**
+```text
+my-api/
+├── src/
+│   ├── main.ar              # Entry point
+│   ├── app.module.ar        # Route registration
+│   ├── config/              # Environment config
+│   ├── common/              # Middleware, Guards, Utils
+│   └── modules/             # Feature modules (Controller, Service, Entity)
+│       ├── users/
+│       └── auth/
+└── README.md
+```
+
+### 3. Built-in Functions Reference
+
+| Function | Description |
+|----------|-------------|
+| `env(key, default)` | Get environment variable |
+| `bcrypt_hash(pwd)` | Hash password securely |
+| `bcrypt_verify(pwd, hash)` | Verify password hash |
+| `jwt_sign(payload, secret)` | Generate JWT token |
+| `jwt_verify(token, secret)` | Verify/Decode JWT |
+| `now()` / `timestamp()` | Unix timestamp (seconds) |
+| `uuid()` | Generate secure UUID |
+| `sleep(ms)` | Pause execution |
+
+---
+
+## 📖 Language Guide
+
+### Traits & Generics (v2.20.0)
 ```javascript
 trait Printable {
     fn to_string(self) -> string;
@@ -57,137 +113,47 @@ fn print_it<T: Printable>(obj: T) {
 }
 ```
 
-### FFI (Foreign Function Interface) (v2.20.0)
+### Macros (v2.24.0)
 ```javascript
-extern "C" {
-    fn malloc(size: i64) -> *void;
-    fn free(ptr: *void);
-}
-
-fn main() {
-    let ptr = malloc(1024);
-    // ... use ptr ...
-    free(ptr);
+macro route(app, method, path, handler) {
+    $app.router.add($method, $path, $handler);
 }
 ```
 
-### Modules & Imports (v2.7.0)
+### Defer (v2.23.0)
 ```javascript
-// math_utils.ar
-fn math_add(a, b) { return a + b; }
-
-// main.ar
-import "math_utils.ar";
-fn main() { print(math_add(5, 3)); }
+let file = open("data.txt");
+defer close(file); // Executed at end of scope
 ```
 
-### Methods (v2.5.0)
-```javascript
-struct Circle { radius: int }
-impl Circle {
-    fn area(self) { return 3 * self.radius * self.radius; }
-}
+---
 
-## Version History
-- **v2.24.0**: Macros System, Module Imports, Networking Built-ins, Web Framework Demo.
-- **v2.23.0**: Defer statement (`defer`) for resource management and block scoping logic.
+## 📜 Version History
 
-## Ecosystem Demo
-A full-featured **Web Framework** (`ArgonWeb`) and **Todo API** are available in `examples/`.
-- **Networking**: Built-in TCP Listener/Stream.
-- **Framework**: `examples/argon_web.ar` (Router, Context).
-- **App**: `examples/todo_server.ar` (Handlers, Macros, JSON).
+| Version | Key Features |
+|---------|--------------|
+| **v2.24.0** | **Macros System**, **ArgonWeb CLI**, **Env/Crypto Built-ins** |
+| **v2.23.0** | `defer` statement for resource management |
+| **v2.22.0** | Optimization Pass (Constant Folding) |
+| **v2.21.0** | Garbage Collection (Reference Counting) |
+| **v2.20.0** | **FFI** & **Traits** System |
+| **v2.19.0** | WebAssembly (WASM) Target |
+| **v2.18.0** | Async/Await Support |
+| **v2.10.0** | Package Manager (APM) |
 
-Run the demo:
-```bash
-./argon examples/todo_server.ar
-# Or: cargo run --release examples/todo_server.ar
-```
-Output:
-```
-ArgonWeb Server running on port 8080
-```
-Then visit `http://localhost:8080/` or `http://localhost:8080/todos`.
+---
 
-## ArgonWeb CLI
+## 🗺️ Roadmap
 
-Generate NestJS-style project structure:
-
-```bash
-# Create new project
-./argonweb-cli.sh new my-api
-
-# Run the server
-cd my-api
-../argon src/main.ar
-```
-
-**Generated Structure:**
-```
-my-api/
-├── src/
-│   ├── main.ar              # Entry point
-│   ├── app.module.ar        # Route registration
-│   ├── config/
-│   │   └── app.config.ar
-│   ├── common/
-│   │   ├── middleware/
-│   │   ├── guards/
-│   │   └── utils/
-│   └── modules/
-│       ├── users/           # (entity, service, controller)
-│       └── auth/            # (service, controller)
-└── README.md
-```
-
-## Built-in Functions
-
-| Function | Description |
-|----------|-------------|
-| `bcrypt_hash(password)` | Hash password |
-| `bcrypt_verify(password, hash)` | Verify password |
-| `jwt_sign(payload, secret)` | Generate JWT token |
-| `jwt_verify(token, secret)` | Verify & decode JWT |
-| `now()` / `timestamp()` | Unix timestamp (seconds) |
-| `timestamp_ms()` | Unix timestamp (milliseconds) |
-| `date_now()` | ISO date string |
-| `uuid()` / `generate_id()` | Generate unique ID |
-| `random()` | Pseudo-random number |
-| `sleep(ms)` | Sleep for milliseconds |
-| `env(key, default)` | Get environment variable |
-
-## Version History (Continued)
-- **v2.22.0**: Optimization Pass (Constant Folding, Dead Code Elimination).
-- **v2.21.0**: Garbage Collection (Reference Counting), Reference Semantics for Arrays/Objects.
-- **v2.20.0**: FFI (extern, pointers) and Traits (trait, impl, dynamic dispatch) support. New Rust Interpreter.
-- **v2.19.0**: WebAssembly target (compile to WASM, browser deployment, WASI support)
-- **v2.18.0**: Async/await support (`async fn`, `await` expressions)
-- **v2.17.0**: Debugger support (DWARF debug info, GDB integration, -g flag)
-- **v2.16.0**: Generic types with full monomorphization
-- **v2.15.0**: Generic type syntax support
-- **v2.14.0**: Full LSP implementation
-- **v2.10.0**: Package Manager (APM)
-- **v2.7.0**: Module system
-- **v2.6.0**: Enum types
-- **v2.5.0**: Struct Methods
-- **v2.3.0**: Multi-threading
-- **v2.1.0**: Networking
-
-## Roadmap
 - [x] Self-Hosting Compiler ✅
 - [x] Networking & Multi-threading ✅
 - [x] Structs, Methods, Enums ✅
-- [x] Standard library (21 modules) ✅
 - [x] Package Manager (APM) ✅
 - [x] LSP (Language Server Protocol) ✅
-- [x] Generic types ✅
-- [x] Async/await ✅
-- [x] WebAssembly target ✅
-- [x] FFI (Foreign Function Interface) ✅ (v2.20.0)
-- [x] Traits/Interfaces ✅ (v2.20.0)
-- [x] Garbage Collection (RC) ✅ (v2.21.0)
-- [x] Optimization (Constant Folding) ✅ (v2.22.0)
-- [x] Destructors / RAII (defer keyword) ✅ (v2.23.0)
-- [x] Macros / Metaprogramming ✅ (v2.24.0)
-- [ ] Ecosystem Demo (Web Framework / Game)
-
+- [x] Generic types & Traits ✅
+- [x] Async/Await ✅
+- [x] WebAssembly Target ✅
+- [x] FFI ✅
+- [x] Garbage Collection ✅
+- [x] Macros & Metaprogramming ✅
+- [x] Ecosystem Demo (ArgonWeb) ✅
