@@ -1,6 +1,8 @@
 // ============================================
 // ARGON STANDARD LIBRARY: CRYPTO (v3.0.0)
-// Cryptographic utilities, Hashing, Encoding
+// Cryptographic utilities
+// Note: These are simplified implementations
+// For production, use native crypto via FFI
 // ============================================
 
 // ============================================
@@ -33,7 +35,7 @@ fn randomBytes(length: int) -> string {
     return result;
 }
 
-// Generate random integer in range [min, max]
+// Generate random integer in range
 fn randomInt(min: int, max: int) -> int {
     return rand_int(min, max);
 }
@@ -43,98 +45,49 @@ fn randomFloat() -> int {
     return rand_int(0, 1000000) / 1000000;
 }
 
-// Generate a random boolean
-fn randomBool() -> bool {
-    return rand_int(0, 1) == 1;
-}
-
-// Pick a random element from an array (simulated)
-// Note: Requires generic array support to be fully type-safe, using any for now
-fn randomPick(arr: [any]) -> any {
-    if (len(arr) == 0) { return null; }
-    let idx = rand_int(0, len(arr) - 1);
-    return arr[idx];
-}
-
 // ============================================
-// UUID & ID GENERATION
+// UUID GENERATION
 // ============================================
 
-// Generate UUID v4 (Standard)
+// Generate UUID v4
 fn uuidV4() -> string {
     return uuid();
 }
 
-// Generate UUID without dashes
-fn uuidSimple() -> string {
-    let u = uuid();
-    let res = "";
-    let i = 0;
-    while (i < len(u)) {
-        let c = char_at(u, i);
-        if (c != "-") {
-            res = res + c;
-        }
-        i = i + 1;
-    }
-    return res;
-}
-
-// Generate short ID (8 characters alphanumeric)
+// Generate short ID (8 characters)
 fn shortId() -> string {
+    return substr(randomBytes(8), 0, 8);
+}
+
+// Generate nano ID (21 characters)
+fn nanoId() -> string {
     let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    let res = "";
+    let result = "";
     let i = 0;
-    while (i < 8) {
+    while (i < 21) {
         let idx = rand_int(0, 61);
-        res = res + char_at(chars, idx);
+        result = result + char_at(chars, idx);
         i = i + 1;
     }
-    return res;
-}
-
-// Generate Nano ID (configurable length)
-fn nanoId(length: int) -> string {
-    let chars = "_-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    let res = "";
-    let i = 0;
-    while (i < length) {
-        let idx = rand_int(0, 63);
-        res = res + char_at(chars, idx);
-        i = i + 1;
-    }
-    return res;
+    return result;
 }
 
 // ============================================
-// HEX ENCODING / DECODING
+// HEX ENCODING
 // ============================================
 
-// Convert integer to hex string (2 chars)
-fn byteToHex(n: int) -> string {
-    let hex = "";
-    let num = n;
-    if (num < 0) { num = 0; }
-    if (num > 255) { num = 255; }
-    
-    let hi = num / 16;
-    let lo = num % 16;
-    return char_at(HEX_CHARS, hi) + char_at(HEX_CHARS, lo);
-}
-
-// Convert integer to hex string (variable length)
+// Convert integer to hex string
 fn toHex(n: int) -> string {
     let hex = "";
     let num = n;
     if (num < 0) { num = 0 - num; }
     if (num == 0) { return "00"; }
-    
     while (num > 0) {
         let digit = num % 16;
         hex = char_at(HEX_CHARS, digit) + hex;
         num = num / 16;
     }
-    // Pad to even length if needed
+    // Pad to even length
     if (len(hex) % 2 == 1) {
         hex = "0" + hex;
     }
@@ -145,53 +98,27 @@ fn toHex(n: int) -> string {
 fn fromHex(hex: string) -> int {
     let result = 0;
     let i = 0;
-    let chars = hex; // copy
-    // Handle 0x prefix
-    if (len(hex) >= 2 && char_at(hex, 0) == "0" && (char_at(hex, 1) == "x" || char_at(hex, 1) == "X")) {
-        chars = substr(hex, 2, len(hex) - 2);
-    }
-    
-    while (i < len(chars)) {
-        let c = char_at(chars, i);
+    while (i < len(hex)) {
+        let c = char_at(hex, i);
         let val = 0;
-        
-        // Manual char code lookups (simplified)
-        let code = charCodeAt(chars, i);
-        
-        if (code >= 48 && code <= 57) { // 0-9
-            val = code - 48;
-        } else if (code >= 97 && code <= 102) { // a-f
-            val = code - 87;
-        } else if (code >= 65 && code <= 70) { // A-F
-            val = code - 55;
+        if (c >= "0" && c <= "9") {
+            val = charCodeAt(c, 0) - 48;
+        } else if (c >= "a" && c <= "f") {
+            val = charCodeAt(c, 0) - 87;
+        } else if (c >= "A" && c <= "F") {
+            val = charCodeAt(c, 0) - 55;
         }
-        
         result = result * 16 + val;
         i = i + 1;
     }
     return result;
 }
 
-// Create a hexdump of a string (useful for debugging binary data)
-fn hexdump(data: string) -> string {
-    let output = "";
-    let i = 0;
-    while (i < len(data)) {
-        let byte = charCodeAt(data, i);
-        output = output + byteToHex(byte) + " ";
-        if ((i + 1) % 16 == 0) {
-            output = output + "\n";
-        }
-        i = i + 1;
-    }
-    return output;
-}
-
 // ============================================
-// BASE64 ENCODING / DECODING
+// BASE64 ENCODING
 // ============================================
 
-// Encode string to Base64
+// Encode bytes to Base64
 fn base64Encode(input: string) -> string {
     let result = "";
     let i = 0;
@@ -238,150 +165,70 @@ fn base64Encode(input: string) -> string {
     return result;
 }
 
-// Decode Base64 string (Simplified - assumes valid input)
-fn base64Decode(input: string) -> string {
-    // This requires a reverse lookup table which is verbose to implement in pure Argon
-    // For now returning placeholder or implementing simplified version if needed
-    // Detailed implementation omitted for brevity in this specific pass
-    return "NOT_IMPLEMENTED";
-}
-
 // ============================================
-// HASHING ALGORITHMS
+// HASHING
 // ============================================
 
-// DJB2 Hash (Good for non-cryptographic hash maps)
+// Simple hash function (DJB2 algorithm)
 fn hashDJB2(input: string) -> int {
     let hash = 5381;
     let i = 0;
     while (i < len(input)) {
         let c = charCodeAt(input, i);
-        hash = ((hash * 33) + c); 
-        // Force 32-bit wrap-around simulation
-        hash = hash % 2147483647; 
+        hash = ((hash * 33) + c) % 2147483647;
         i = i + 1;
     }
     return hash;
 }
 
-// SDBM Hash
-fn hashSDBM(input: string) -> int {
-    let hash = 0;
-    let i = 0;
-    while (i < len(input)) {
-        let c = charCodeAt(input, i);
-        // hash = c + (hash << 6) + (hash << 16) - hash;
-        hash = c + (hash * 64) + (hash * 65536) - hash;
-        hash = hash % 2147483647;
-        i = i + 1;
-    }
-    return hash;
+// Simple hash to hex
+fn hash(input: string) -> string {
+    return toHex(hashDJB2(input));
 }
 
-// FNV-1a Hash (32-bit)
+// FNV-1a hash
 fn hashFNV1a(input: string) -> int {
     let hash = 2166136261;
     let i = 0;
     while (i < len(input)) {
         let c = charCodeAt(input, i);
         hash = (hash * 16777619) % 2147483647;
-        hash = hash + c; // XOR replacement
+        hash = hash + c;
         i = i + 1;
     }
     return hash;
 }
 
-// General Hash Wrapper (returns Hex)
-fn hash(input: string) -> string {
-    return toHex(hashDJB2(input));
-}
-
-// MD5 (Placeholder - Full implementation is too complex for stdlib without array buffers)
-fn md5(input: string) -> string {
-    // In a real implementation, this would process 512-bit blocks
-    // Returning a unique hash based on simpler algo for now to prevent breakage
-    return toHex(hashFNV1a(input)) + toHex(hashSDBM(input)); 
-}
-
 // ============================================
-// MESSAGE AUTHENTICATION (HMAC)
+// HMAC (Simplified)
 // ============================================
 
-// Simple HMAC-like construction
+// Simple HMAC using hash
 fn hmac(key: string, message: string) -> string {
-    let innerKey = key + "-inner-pad";
-    let outerKey = key + "-outer-pad";
+    let innerKey = key + "inner";
+    let outerKey = key + "outer";
     let innerHash = hash(innerKey + message);
     return hash(outerKey + innerHash);
 }
 
 // ============================================
-// ENCRYPTION CIPHERS
+// ENCRYPTION (Simple XOR - NOT SECURE)
 // ============================================
 
-// XOR Cipher (Symmetric, insecure, good for obfuscation)
+// XOR cipher (for demo purposes only)
 fn xorCipher(data: string, key: string) -> string {
     let result = "";
     let keyLen = len(key);
-    if (keyLen == 0) { return data; }
-    
     let i = 0;
     while (i < len(data)) {
         let dataChar = charCodeAt(data, i);
         let keyChar = charCodeAt(key, i % keyLen);
-        
-        // XOR logic: (a + b) % 256 is not XOR, but a reversible operation
-        // Since we don't have bitwise XOR operator '^' in all versions
-        // We use a substitution cipher logic based near XOR properties
-        
-        let mixed = 0;
-        // Basic Vigenère-like shift if XOR not available
-        mixed = (dataChar + keyChar) % 256; 
-        
-        result = result + charFromCode(mixed);
-        i = i + 1;
-    }
-    return result;
-}
-
-fn xorDecrypt(data: string, key: string) -> string {
-    let result = "";
-    let keyLen = len(key);
-    if (keyLen == 0) { return data; }
-    
-    let i = 0;
-    while (i < len(data)) {
-        let dataChar = charCodeAt(data, i);
-        let keyChar = charCodeAt(key, i % keyLen);
-        
-        // Reverse operation of encrypt
-        let mixed = dataChar - keyChar;
-        while (mixed < 0) { mixed = mixed + 256; }
-        
-        result = result + charFromCode(mixed);
-        i = i + 1;
-    }
-    return result;
-}
-
-// ROT13 (Caesar Cipher variant)
-fn rot13(input: string) -> string {
-    let result = "";
-    let i = 0;
-    while (i < len(input)) {
-        let c = charCodeAt(input, i);
-        let next = c;
-        
-        // 'a' = 97, 'z' = 122
-        // 'A' = 65, 'Z' = 90
-        
-        if (c >= 97 && c <= 122) {
-            next = 97 + ((c - 97 + 13) % 26);
-        } else if (c >= 65 && c <= 90) {
-            next = 65 + ((c - 65 + 13) % 26);
+        // XOR using subtraction trick
+        let xored = dataChar + keyChar;
+        if (xored > 255) {
+            xored = xored - 256;
         }
-        
-        result = result + charFromCode(next);
+        result = result + charFromCode(xored % 256);
         i = i + 1;
     }
     return result;
@@ -391,139 +238,57 @@ fn rot13(input: string) -> string {
 // PASSWORD UTILITIES
 // ============================================
 
-// Generate cryptographically strong password
-fn generatePassword(length: int, useSpecial: bool) -> string {
-    let alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let nums = "0123456789";
-    let special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-    
-    let chars = alpha + nums;
-    if (useSpecial) {
-        chars = chars + special;
-    }
-    
+// Generate random password
+fn generatePassword(length: int) -> string {
+    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
     let result = "";
-    let poolSize = len(chars);
     let i = 0;
     while (i < length) {
-        let idx = rand_int(0, poolSize - 1);
+        let idx = rand_int(0, len(chars) - 1);
         result = result + char_at(chars, idx);
         i = i + 1;
     }
     return result;
 }
 
-// Check password strength (0-5 score)
+// Check password strength (returns 0-4)
 fn passwordStrength(password: string) -> int {
     let score = 0;
-    let l = len(password);
+    let passLen = len(password);
     
-    if (l < 8) { return 0; } // Too short
-    if (l >= 8) { score = score + 1; }
-    if (l >= 12) { score = score + 1; }
+    // Length check
+    if (passLen >= 8) { score = score + 1; }
+    if (passLen >= 12) { score = score + 1; }
     
+    // Has lowercase
     let hasLower = false;
     let hasUpper = false;
-    let hasNum = false;
+    let hasDigit = false;
     let hasSpecial = false;
     
     let i = 0;
-    while (i < l) {
-        let c = charCodeAt(password, i);
-        if (c >= 97 && c <= 122) { hasLower = true; }
-        else if (c >= 65 && c <= 90) { hasUpper = true; }
-        else if (c >= 48 && c <= 57) { hasNum = true; }
-        else { hasSpecial = true; }
+    while (i < passLen) {
+        let c = char_at(password, i);
+        if (c >= "a" && c <= "z") { hasLower = true; }
+        if (c >= "A" && c <= "Z") { hasUpper = true; }
+        if (c >= "0" && c <= "9") { hasDigit = true; }
+        if (c == "!" || c == "@" || c == "#" || c == "$" || c == "%") {
+            hasSpecial = true;
+        }
         i = i + 1;
     }
     
     if (hasLower && hasUpper) { score = score + 1; }
-    if (hasNum) { score = score + 1; }
-    if (hasSpecial) { score = score + 1; }
+    if (hasDigit && hasSpecial) { score = score + 1; }
     
     return score;
 }
 
-// PBKDF2 Simulation (Iterative Hashing)
-fn pbkdf2(password: string, salt: string, iterations: int) -> string {
-    // Real PBKDF2 needs generic array support and bitwise ops
-    // This is a simulation using repeated casing
-    let derived = password + salt;
-    let i = 0;
-    while (i < iterations) {
-        derived = hash(derived + toString(i));
-        i = i + 1;
-    }
-    return derived;
-}
-
 // ============================================
-// JSON WEB TOKENS (JWT) Helpers
+// TIMING-SAFE COMPARISON
 // ============================================
 
-fn jwtEncode(header: any, payload: any, secret: string) -> string {
-    // 1. Encode Header
-    let headerJson = json_stringify(header);
-    let headerB64 = base64Encode(headerJson);
-    
-    // 2. Encode Payload
-    let payloadJson = json_stringify(payload);
-    let payloadB64 = base64Encode(payloadJson);
-    
-    // 3. Create Signature
-    let data = headerB64 + "." + payloadB64;
-    let signature = hmac(secret, data);
-    let signatureB64 = base64Encode(signature); // Usually hex, but JWT uses base64url usually
-    
-    return data + "." + signatureB64;
-}
-
-fn jwtVerify(token: string, secret: string) -> bool {
-    let parts = split(token, ".");
-    if (len(parts) != 3) { return false; }
-    
-    let headerB64 = parts[0];
-    let payloadB64 = parts[1];
-    let signatureB64 = parts[2];
-    
-    let data = headerB64 + "." + payloadB64;
-    let expectedSig = hmac(secret, data);
-    let expectedSigB64 = base64Encode(expectedSig);
-    
-    return secureCompare(signatureB64, expectedSigB64);
-}
-
-// ============================================
-// TOKEN UTILITIES
-// ============================================
-
-// Generate API token
-fn generateApiKey() -> string {
-    return "pk_" + randomBytes(24);
-}
-
-// Generate Session ID
-fn generateSessionId() -> string {
-    return "sess_" + uuidSimple();
-}
-
-// Generate OTP (One Time Password) - numeric
-fn generateOTP(digits: int) -> string {
-    let res = "";
-    let i = 0;
-    while (i < digits) {
-        let n = rand_int(0, 9);
-        res = res + toString(n);
-        i = i + 1;
-    }
-    return res;
-}
-
-// ============================================
-// SECURITY UTILITIES
-// ============================================
-
-// Constant-time string comparison (prevent timing attacks)
+// Compare strings in constant time
 fn secureCompare(a: string, b: string) -> bool {
     if (len(a) != len(b)) {
         return false;
@@ -533,66 +298,55 @@ fn secureCompare(a: string, b: string) -> bool {
     while (i < len(a)) {
         let ca = charCodeAt(a, i);
         let cb = charCodeAt(b, i);
-        // diff |= (ca ^ cb) -- simulated
-        if (ca != cb) {
-            diff = 1;
-        }
+        diff = diff + abs(ca - cb);
         i = i + 1;
     }
     return diff == 0;
 }
 
-// Mask a string (e.g. for credit cards or emails)
-fn maskString(s: string, visibleStart: int, visibleEnd: int) -> string {
-    let l = len(s);
-    let res = "";
-    let i = 0;
-    while (i < l) {
-        if (i < visibleStart || i >= (l - visibleEnd)) {
-            res = res + char_at(s, i);
-        } else {
-            res = res + "*";
-        }
-        i = i + 1;
-    }
-    return res;
+// ============================================
+// TOKEN GENERATION
+// ============================================
+
+// Generate API token
+fn generateToken(prefix: string) -> string {
+    return prefix + "_" + randomBytes(16);
 }
 
-// Sanitize string (remove non-alphanumeric)
-fn sanitizeAlphaNum(s: string) -> string {
-    let res = "";
-    let i = 0;
-    while (i < len(s)) {
-        let c = charCodeAt(s, i);
-        let keep = false;
-        if (c >= 48 && c <= 57) { keep = true; } // 0-9
-        if (c >= 65 && c <= 90) { keep = true; } // A-Z
-        if (c >= 97 && c <= 122) { keep = true; } // a-z
-        
-        if (keep) {
-            res = res + char_at(s, i);
-        }
-        i = i + 1;
-    }
-    return res;
+// Generate session ID
+fn generateSessionId() -> string {
+    return "sess_" + randomBytes(24);
+}
+
+// Generate verification code (6 digits)
+fn generateVerificationCode() -> string {
+    let code = rand_int(100000, 999999);
+    return toString(code);
 }
 
 // ============================================
-// ARRAY UTILITIES used by Crypto
+// UTILITY FUNCTIONS
 // ============================================
 
-// Scramble an array (Fisher-Yates shuffle)
-fn shuffle(arr: [any]) -> [any] {
-    let n = len(arr);
-    // Note: In Argon, arrays are passed by reference, but we want to return a copy ideally
-    // Currently modifying in place for simplicity
-    let i = n - 1;
-    while (i > 0) {
-        let j = rand_int(0, i);
-        let temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-        i = i - 1;
+// Absolute value
+fn abs(n: int) -> int {
+    if (n < 0) { return 0 - n; }
+    return n;
+}
+
+// Pad string to length
+fn padLeft(s: string, length: int, char: string) -> string {
+    let result = s;
+    while (len(result) < length) {
+        result = char + result;
     }
-    return arr;
+    return result;
+}
+
+fn padRight(s: string, length: int, char: string) -> string {
+    let result = s;
+    while (len(result) < length) {
+        result = result + char;
+    }
+    return result;
 }
