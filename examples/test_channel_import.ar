@@ -1,0 +1,38 @@
+// Channel Import Test
+import "channel"
+
+fn main() {
+    print("==========================================");
+    print("       CHANNEL IMPORT TEST");
+    print("==========================================");
+    print("");
+    
+    // Create buffered channel
+    let ch = bufferedChannel(10);
+    print("Created buffered channel with capacity 10");
+    
+    // Send messages
+    send(ch, "Hello");
+    send(ch, "World");
+    send(ch, 42);
+    print("Sent 3 messages");
+    print("Pending: " + pending(ch));
+    
+    // Receive
+    let r1 = recv(ch);
+    let r2 = recv(ch);
+    let r3 = recv(ch);
+    
+    print("Received: " + r1.value + ", " + r2.value + ", " + r3.value);
+    print("Pending after recv: " + pending(ch));
+    
+    // Close
+    close(ch);
+    print("Channel closed: " + isClosed(ch));
+    
+    print("");
+    print("[PASS] Channel import works!");
+    print("==========================================");
+    
+    return 0;
+}

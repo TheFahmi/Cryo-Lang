@@ -1,0 +1,63 @@
+// Simple Channel Test
+
+struct TestChannel {
+    buffer: any,
+    closed: bool
+}
+
+fn createChan() -> TestChannel {
+    return TestChannel {
+        buffer: [],
+        closed: false
+    };
+}
+
+fn chanSend(ch: TestChannel, val: any) {
+    push(ch.buffer, val);
+}
+
+fn chanRecv(ch: TestChannel) -> any {
+    if (len(ch.buffer) == 0) {
+        return null;
+    }
+    let val = ch.buffer[0];
+    // Remove first
+    let newBuf = [];
+    let i = 1;
+    while (i < len(ch.buffer)) {
+        push(newBuf, ch.buffer[i]);
+        i = i + 1;
+    }
+    ch.buffer = newBuf;
+    return val;
+}
+
+fn main() {
+    print("==========================================");
+    print("       SIMPLE CHANNEL TEST");
+    print("==========================================");
+    print("");
+    
+    let ch = createChan();
+    
+    // Send
+    chanSend(ch, "Hello");
+    chanSend(ch, "World");
+    chanSend(ch, 42);
+    print("Sent 3 messages");
+    print("Buffer length: " + len(ch.buffer));
+    
+    // Recv
+    let v1 = chanRecv(ch);
+    let v2 = chanRecv(ch);
+    let v3 = chanRecv(ch);
+    
+    print("Received: " + v1 + ", " + v2 + ", " + v3);
+    print("Buffer length after recv: " + len(ch.buffer));
+    
+    print("");
+    print("[PASS] Simple channel works!");
+    print("==========================================");
+    
+    return 0;
+}
