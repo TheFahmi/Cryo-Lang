@@ -62,19 +62,68 @@ Focus on tooling and developer productivity.
 
 ---
 
-## 🔮 Phase 4: Enterprise Features (v3.0+) [NEXT]
+## 🚀 Phase 4: Enterprise Features (v3.0+) [IN PROGRESS]
 Focus on ecosystem and enterprise readiness.
 
-- **Standard Library Expansion**:
-    - [ ] `crypto` module (via FFI to OpenSSL)
-    - [ ] `sql` module (SQLite/Postgres bindings)
-    - [ ] `http` module (high-performance server)
-- **Concurrency**:
-    - [ ] True parallelism (M:N threading)
-    - [ ] Channel-based communication
-- **Tooling**:
-    - [ ] Package registry (apm.argon.dev)
-    - [ ] Documentation generator
+### ✅ Standard Library Expansion [COMPLETED]
+- [x] `crypto` module (randomBytes, UUID, hash, HMAC, base64)
+- [x] `http` module (Router, Request/Response, CORS, cookies)
+- [x] `sql` module (in-memory database with CRUD operations)
+- [x] `async` module (Future, async utilities)
+
+### ✅ Concurrency [COMPLETED]
+- [x] Channel-based communication (`channel` module)
+- [x] Worker-based parallelism (`worker` module)
+- [x] Spawn/Join semantics
+- [x] Work-stealing queues
+- [x] Pipeline patterns
+- [x] **True OS Threading** (native `std::thread`)
+  - [x] `thread_spawn()` / `thread_join()` built-ins
+  - [x] `channel_new()` / `channel_send()` / `channel_recv()` built-ins
+  - [x] Non-blocking `channel_try_recv()` and `channel_recv_timeout()`
+
+### ✅ Tooling [COMPLETED]
+- [x] Documentation generator (`argondoc`)
+- [x] Code formatter (`argonfmt`)
+- [ ] Package registry (apm.argon.dev)
+
+---
+
+## 🚀 Phase 5: Ecosystem (v3.1+) [IN PROGRESS]
+Building a thriving developer ecosystem.
+
+### ✅ Web Framework (`argonweb`) [COMPLETED]
+- [x] Express-like HTTP server
+- [x] NestJS-style architecture
+- [x] Router with route parameters (`:id`)
+- [x] Query string parsing
+- [x] Middleware pipeline
+- [x] Built-in middleware (Logger, CORS, JSON parser)
+- [x] Response helpers (responseOk, responseError, etc.)
+- [x] Context API (json, html, redirect, params)
+- [x] Template Engine (EJS/Jinja2-style)
+  - [x] Variable interpolation `{{ name }}`
+  - [x] Conditionals `{% if %}...{% endif %}`
+  - [x] Loops `{% for item in items %}`
+  - [x] Includes `{% include "partial" %}`
+  - [x] Filters `{{ name | upper }}`
+  - [x] Layout inheritance `{% extends "base" %}`
+- [x] WebSocket support
+  - [x] WebSocket server
+  - [x] Frame encoding/decoding
+  - [x] Handshake protocol
+  - [x] Broadcast messaging
+
+### Package Registry
+- [ ] `apm.argon.dev` web portal
+- [ ] Package publishing workflow
+- [ ] Version management & semver
+- [ ] Dependency resolution
+
+### Database Connectors
+- [ ] PostgreSQL driver
+- [ ] MySQL driver
+- [ ] Redis client
 
 ---
 
@@ -85,5 +134,10 @@ Focus on ecosystem and enterprise readiness.
 | v2.26.0 | Traits & Interfaces | ✅ |
 | v2.27.0 | FFI Support | ✅ |
 | v2.28.0 | Garbage Collector | ✅ |
-| v3.0.0 | LSP & Debugger | ✅ (Current) |
-| v3.0.0  | Enterprise Features | 🔮 Next |
+| v2.29.0 | LSP & Debugger | ✅ |
+| v3.0.0  | Enterprise Stdlib | ✅ |
+| v3.0.1  | Concurrency (channel, worker) | ✅ |
+| v3.1.0  | True OS Threading | ✅ |
+| v3.1.1  | ArgonWeb Framework | ✅ (Current) |
+| v3.2.0  | Package Registry | 🔮 Next |
+| v3.3.0  | Database Connectors | 🔮 Planned |

@@ -6,6 +6,7 @@
 use crate::parser::{Expr, Stmt, TopLevel, Function, Param, TraitDef};
 use crate::ffi::FfiManager;
 use crate::gc::GarbageCollector;
+use crate::threading::{ThreadManager, ThreadValue};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -98,6 +99,8 @@ pub struct Interpreter {
     ffi: FfiManager,
     // GC
     gc: GarbageCollector,
+    // Threading
+    threads: ThreadManager,
 }
 
 #[derive(Debug)]
@@ -127,6 +130,7 @@ impl Interpreter {
             next_sock_id: 1000,
             ffi: FfiManager::new(),
             gc: GarbageCollector::new(),
+            threads: ThreadManager::new(),
         }
     }
     
@@ -1053,6 +1057,92 @@ impl Interpreter {
                 ];
                 return Ok(Value::Array(Rc::new(RefCell::new(stats))));
             }
+            // ============================================
+            // Threading Built-ins (True Parallelism)
+            // ============================================
+            "thread_spawn" | "spawn_thread" => {
+                // spawn_thread(value, "operation") -> worker_id
+                // Operations: "double", "square", "factorial", "fib", "sleep"
+                if args.len() >= 2 {
+                    if let (Value::Int(value), Value::String(operation)) = (&args[0], &args[1]) {
+                        let worker_id = self.threads.spawn_compute(*value, operation);
+                        return Ok(Value::Int(worker_id));
+                    }
+                }
+                return Ok(Value::Int(-1));
+            }
+            "thread_join" | "join_thread" => {
+                // join_thread(worker_id) -> result value
+                if let Some(Value::Int(worker_id)) = args.first() {
+                    if let Some(result) = self.threads.join_worker(*worker_id) {
+                        return Ok(self.thread_value_to_value(result));
+                    }
+                }
+                return Ok(Value::Null);
+            }
+            "thread_is_done" | "is_thread_done" => {
+                // is_thread_done(worker_id) -> bool
+                if let Some(Value::Int(worker_id)) = args.first() {
+                    return Ok(Value::Bool(self.threads.is_worker_finished(*worker_id)));
+                }
+                return Ok(Value::Bool(true));
+            }
+            "thread_active_count" => {
+                // thread_active_count() -> number of running threads
+                return Ok(Value::Int(self.threads.active_workers() as i64));
+            }
+            "channel_new" | "channel_create" => {
+                // channel_new() -> channel_id
+                let channel_id = self.threads.create_channel();
+                return Ok(Value::Int(channel_id));
+            }
+            "channel_send" => {
+                // channel_send(channel_id, value) -> bool
+                if args.len() >= 2 {
+                    if let Value::Int(channel_id) = &args[0] {
+                        let thread_val = self.value_to_thread_value(&args[1]);
+                        let success = self.threads.channel_send(*channel_id, thread_val);
+                        return Ok(Value::Bool(success));
+                    }
+                }
+                return Ok(Value::Bool(false));
+            }
+            "channel_recv" => {
+                // channel_recv(channel_id) -> value (blocks until message)
+                if let Some(Value::Int(channel_id)) = args.first() {
+                    if let Some(result) = self.threads.channel_recv(*channel_id) {
+                        return Ok(self.thread_value_to_value(result));
+                    }
+                }
+                return Ok(Value::Null);
+            }
+            "channel_try_recv" => {
+                // channel_try_recv(channel_id) -> value or null (non-blocking)
+                if let Some(Value::Int(channel_id)) = args.first() {
+                    if let Some(result) = self.threads.channel_try_recv(*channel_id) {
+                        return Ok(self.thread_value_to_value(result));
+                    }
+                }
+                return Ok(Value::Null);
+            }
+            "channel_recv_timeout" => {
+                // channel_recv_timeout(channel_id, timeout_ms) -> value or null
+                if args.len() >= 2 {
+                    if let (Value::Int(channel_id), Value::Int(timeout_ms)) = (&args[0], &args[1]) {
+                        if let Some(result) = self.threads.channel_recv_timeout(*channel_id, *timeout_ms as u64) {
+                            return Ok(self.thread_value_to_value(result));
+                        }
+                    }
+                }
+                return Ok(Value::Null);
+            }
+            "channel_close" => {
+                // channel_close(channel_id)
+                if let Some(Value::Int(channel_id)) = args.first() {
+                    self.threads.close_channel(*channel_id);
+                }
+                return Ok(Value::Null);
+            }
             _ => {}
         }
         
@@ -1363,6 +1453,43 @@ impl Interpreter {
              "&&" => Ok(Value::Bool(left.is_truthy() && right.is_truthy())),
              "||" => Ok(Value::Bool(left.is_truthy() || right.is_truthy())),
             _ => Err(format!("Unknown operator: {}", op))
+        }
+    }
+    
+    // ============================================
+    // Threading Helper Methods
+    // ============================================
+    
+    fn value_to_thread_value(&self, value: &Value) -> ThreadValue {
+        match value {
+            Value::Null => ThreadValue::Null,
+            Value::Bool(b) => ThreadValue::Bool(*b),
+            Value::Int(n) => ThreadValue::Int(*n),
+            Value::String(s) => ThreadValue::String(s.clone()),
+            Value::Array(arr) => {
+                let items: Vec<ThreadValue> = arr.borrow()
+                    .iter()
+                    .map(|v| self.value_to_thread_value(v))
+                    .collect();
+                ThreadValue::Array(items)
+            }
+            Value::Struct(_, _) => ThreadValue::Null, // Structs can't be sent between threads
+            Value::Function(_, _, _) => ThreadValue::Null, // Functions can't be sent
+        }
+    }
+    
+    fn thread_value_to_value(&self, value: ThreadValue) -> Value {
+        match value {
+            ThreadValue::Null => Value::Null,
+            ThreadValue::Bool(b) => Value::Bool(b),
+            ThreadValue::Int(n) => Value::Int(n),
+            ThreadValue::String(s) => Value::String(s),
+            ThreadValue::Array(arr) => {
+                let items: Vec<Value> = arr.into_iter()
+                    .map(|v| self.thread_value_to_value(v))
+                    .collect();
+                Value::Array(Rc::new(RefCell::new(items)))
+            }
         }
     }
 }

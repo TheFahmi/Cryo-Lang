@@ -13,6 +13,7 @@ mod fast_vm;
 mod ffi;
 mod gc;
 mod native_compiler;
+mod threading;
 
 use std::env;
 use std::fs;
