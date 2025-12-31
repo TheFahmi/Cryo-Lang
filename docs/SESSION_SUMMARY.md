@@ -50,6 +50,12 @@
 - `examples/optimize_test.ar`
 - `examples/gc_test.ar`
 
+### 6. Ecosystem & Tooling (Completed)
+- **Built-in Functions**: Added `bcrypt`, `jwt`, `timestamp`, `uuid`, etc. to `interpreter.rs`.
+- **ArgonWeb CLI**: Created `argonweb-cli.sh` for NestJS-style project scaffolding.
+- **REST API Demo**: Verified full stack capability with `examples/api_server.ar`.
+- **Documentation**: Updated README with CLI usage and API references.
+
 ---
 
 ## Files Created/Modified
@@ -58,17 +64,19 @@
 | File | Description |
 |------|-------------|
 | `examples/macros_test.ar` | Test for Macros |
+| `examples/argon_web.ar` | Web Framework Core |
+| `examples/todo_server.ar` | Todo API Demo |
+| `examples/api_server.ar` | Full REST API Demo |
+| `argonweb-cli.sh` | Project Generator CLI |
 | `docs/macros_design.md` | Design Doc |
 | `src/expander.rs` | Macro Expander |
 
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `src/interpreter.rs` | Defer impl |
-| `src/parser.rs` | Macro parsing |
-| `src/lexer.rs` | Macro token |
-| `src/main.rs` | Pipeline integration |
-| `README.md` | v2.24.0 |
+| `src/interpreter.rs` | Networking, Crypto, Auth built-ins |
+| `src/parser.rs` | Macro parsing, Struct parsing fixes |
+| `README.md` | v2.24.0 Docs & CLI Guide |
 
 ---
 
@@ -90,4 +98,4 @@
 | Optimization | ✅ (v2.22.0) |
 | Defer / RAII | ✅ (v2.23.0) |
 | **Macros** | ✅ (v2.24.0) |
-| Ecosystem Demo | ⬜ Next |
+| **Ecosystem Demo** | ✅ (v2.24.0) |
