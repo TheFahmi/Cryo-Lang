@@ -3,7 +3,13 @@
 
 set -e
 
-ARGON="./argon.exe"
+if [ -f "./argon.exe" ]; then
+    ARGON="./argon.exe"
+elif command -v argon &> /dev/null; then
+    ARGON="argon"
+else
+    ARGON="./target/release/argon"
+fi
 COMPILER="./self-host/compiler.ar"
 BUILD_DIR="./build"
 

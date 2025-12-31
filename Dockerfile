@@ -16,17 +16,18 @@ COPY self-host/ ./self-host/
 RUN cargo build --release
 
 # Copy binary to path
+# Copy binary to path
 RUN cp target/release/argon /usr/bin/argon
 
-# Copy Benchmarks and stdlib
+# Copy Scripts and Data
+COPY build.sh .
+COPY test_stdlib.ar .
+COPY examples/ ./examples/
 COPY benchmarks/comparison/ ./benchmarks/
 COPY stdlib/ ./stdlib/
 
-# Work in benchmark dir
-WORKDIR /app/benchmarks
+# Make scripts executable
+RUN chmod +x build.sh benchmarks/run.sh
 
-# Make script executable
-RUN chmod +x run.sh
-
-# Run benchmarks
-CMD ["./run.sh"]
+# Default command: Run stdlib tests then benchmarks
+CMD ["bash", "-c", "./build.sh test && ./build.sh bench"]
