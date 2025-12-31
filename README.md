@@ -100,7 +100,8 @@ A full-featured **Web Framework** (`ArgonWeb`) and **Todo API** are available in
 
 Run the demo:
 ```bash
-cargo run --release examples/todo_server.ar
+./argon examples/todo_server.ar
+# Or: cargo run --release examples/todo_server.ar
 ```
 Output:
 ```
@@ -117,7 +118,8 @@ Generate NestJS-style project structure:
 ./argonweb-cli.sh new my-api
 
 # Run the server
-cargo run --release my-api/src/main.ar
+cd my-api
+../argon src/main.ar
 ```
 
 **Generated Structure:**

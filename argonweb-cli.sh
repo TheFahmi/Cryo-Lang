@@ -5,6 +5,7 @@
 # ============================================
 
 VERSION="1.0.0"
+ARGON_BIN="${ARGON_BIN:-argon}"  # Use 'argon' or set ARGON_BIN env var
 
 create_project() {
     PROJECT_NAME=$1
@@ -387,7 +388,12 @@ $PROJECT_NAME/
 ## Run
 
 \`\`\`bash
-cargo run --release $PROJECT_NAME/src/main.ar
+argon src/main.ar
+\`\`\`
+
+Or if argon is not in PATH:
+\`\`\`bash
+./argon src/main.ar
 \`\`\`
 
 ## API Endpoints
@@ -406,7 +412,10 @@ EOF
     echo ""
     echo "Next steps:"
     echo "  cd $PROJECT_NAME"
-    echo "  cargo run --release src/main.ar"
+    echo "  argon src/main.ar"
+    echo ""
+    echo "Or if argon is not in PATH:"
+    echo "  ../argon.exe src/main.ar"
     echo ""
 }
 
