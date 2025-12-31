@@ -73,4 +73,15 @@ Created a brand new interpreter in `src/` (Rust):
 | WebAssembly | ✅ |
 | **FFI** | ✅ (v2.20.0) |
 | **Traits/Interfaces** | ✅ (v2.20.0) |
-| Optimization | ⬜ Next |
+| Optimization | ⬜ Next (Performance) |
+| Macros | ⬜ Planned |
+| Destructors/RAII | ⬜ Planned (Safety) |
+| Ecosystem Demo | ⬜ Planned |
+
+---
+
+## Next Steps (Proposed)
+1. **Destructors (RAII)**: Implement `drop` trait or similar mechanism to handle resource cleanup automatically, especially important for FFI pointer management.
+2. **Optimization**: Implement basic optimizations in the interpreter or LLVM codegen (e.g., constant folding) to improve runtime performance.
+3. **Macro System**: Design a macro system to reduce boilerplate code usage.
+4. **Real-world App**: Build a small web framework or game to test the language's capabilities and finding ergonomic issues.

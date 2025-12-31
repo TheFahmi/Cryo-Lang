@@ -117,5 +117,7 @@ impl Circle {
 - [x] FFI (Foreign Function Interface) ✅ (v2.20.0)
 - [x] Traits/Interfaces ✅ (v2.20.0)
 - [ ] Optimization (LTO, Constant Propagation)
+- [ ] Destructors / RAII (Auto-cleanup for FFI/Files)
 - [ ] Macros / Metaprogramming
+- [ ] Ecosystem Demo (Web Framework / Game)
 - [ ] Garbage Collection (Optional)
