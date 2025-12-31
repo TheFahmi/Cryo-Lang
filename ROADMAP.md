@@ -32,15 +32,13 @@ Enable polymorphism and better code reuse.
 - [x] Method dispatch works with trait-based polymorphism.
 - [x] Example: `examples/traits_test.ar`
 
-### 2. Garbage Collection (GC) [NEXT]
-Move beyond Reference Counting to handle complex memory graphs safely.
-- **Goal**: Replace `Rc<RefCell<T>>` with a Mark-and-Sweep Garbage Collector.
-- **Current Status**: Design doc exists. Using standard Rust `Rc` (leaks on cycles).
-- **Tasks**:
-    - [ ] Implement Object Header & Heap Arena.
-    - [ ] Implement Tracing (Mark phase).
-    - [ ] Implement Sweeping.
-    - [ ] Integrate into Bytecode VM.
+### ✅ 2. Garbage Collection (GC) [COMPLETED v2.28.0]
+Mark-and-Sweep garbage collector for safe memory management.
+- [x] Implement Object Header & Heap Arena.
+- [x] Implement Tracing (Mark phase).
+- [x] Implement Sweeping.
+- [x] `gc_collect()` and `gc_stats()` built-ins.
+- [x] Example: `examples/gc_test.ar`
 
 ### ✅ 3. FFI (Foreign Function Interface) [COMPLETED v2.27.0]
 Load and call C dynamic libraries directly from Argon.
@@ -67,6 +65,7 @@ Focus on developer experience and enterprise readiness.
 ## Release Schedule
 - **v2.25.0**: Performance & Stdlib ✅
 - **v2.26.0**: Traits & Interfaces ✅
-- **v2.27.0**: FFI Support ✅ (Current)
-- **v2.28.0**: Garbage Collector Integration
+- **v2.27.0**: FFI Support ✅
+- **v2.28.0**: Garbage Collector ✅ (Current)
+- **v2.29.0**: Phase 3 - LSP & Debugger
 

@@ -1,6 +1,8 @@
 // Argon Garbage Collector Module
 // Mark-and-Sweep GC for managing heap-allocated objects
 
+#![allow(dead_code)]
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -21,7 +23,7 @@ pub enum GcValue {
     Bool(bool),
     Int(i64),
     String(String),
-    Ref(ObjectId),  // Reference to heap object
+    Ref(ObjectId),
 }
 
 /// Object header for GC tracking
@@ -35,9 +37,9 @@ struct ObjectHeader {
 pub struct GarbageCollector {
     heap: HashMap<ObjectId, RefCell<ObjectHeader>>,
     next_id: ObjectId,
-    roots: Vec<ObjectId>,  // Root set (stack references)
-    threshold: usize,      // Collection threshold
-    allocated: usize,      // Current allocation count
+    roots: Vec<ObjectId>,
+    threshold: usize,
+    allocated: usize,
 }
 
 impl GarbageCollector {
@@ -46,7 +48,7 @@ impl GarbageCollector {
             heap: HashMap::new(),
             next_id: 1,
             roots: Vec::new(),
-            threshold: 1000,  // Collect after 1000 allocations
+            threshold: 1000,
             allocated: 0,
         }
     }
@@ -63,7 +65,6 @@ impl GarbageCollector {
         
         self.allocated += 1;
         
-        // Check if we should collect
         if self.allocated >= self.threshold {
             self.collect();
         }
@@ -86,61 +87,31 @@ impl GarbageCollector {
         self.heap.get(&id).map(|h| h.borrow().data.clone())
     }
     
-    /// Get mutable access to array
-    pub fn get_array_mut(&self, id: ObjectId) -> Option<std::cell::RefMut<Vec<GcValue>>> {
-        self.heap.get(&id).and_then(|h| {
-            let header = h.borrow_mut();
-            if matches!(&header.data, GcObject::Array(_)) {
-                Some(std::cell::RefMut::map(h.borrow_mut(), |h| {
-                    if let GcObject::Array(arr) = &mut h.data {
-                        arr
-                    } else {
-                        unreachable!()
-                    }
-                }))
-            } else {
-                None
-            }
-        })
-    }
-    
-    /// Add a root reference (called when value enters stack)
+    /// Add a root reference
     pub fn add_root(&mut self, id: ObjectId) {
         if !self.roots.contains(&id) {
             self.roots.push(id);
         }
     }
     
-    /// Remove a root reference (called when value leaves stack)
+    /// Remove a root reference
     pub fn remove_root(&mut self, id: ObjectId) {
         self.roots.retain(|&r| r != id);
     }
     
-    /// Clear all roots (e.g., at scope exit)
-    pub fn clear_roots(&mut self) {
-        self.roots.clear();
-    }
-    
     /// Run garbage collection (Mark-and-Sweep)
     pub fn collect(&mut self) {
-        // Phase 1: Mark
         self.mark_phase();
-        
-        // Phase 2: Sweep
         self.sweep_phase();
-        
-        // Reset allocation counter
         self.allocated = 0;
     }
     
     /// Mark phase: trace from roots
     fn mark_phase(&mut self) {
-        // Reset all marks
         for header in self.heap.values() {
             header.borrow_mut().marked = false;
         }
         
-        // Mark from roots
         let roots = self.roots.clone();
         for root in roots {
             self.mark(root);
@@ -152,17 +123,16 @@ impl GarbageCollector {
         if let Some(header) = self.heap.get(&id) {
             let mut h = header.borrow_mut();
             if h.marked {
-                return; // Already marked, avoid cycles
+                return;
             }
             h.marked = true;
             
-            // Mark children
             match &h.data {
                 GcObject::Array(arr) => {
                     let refs: Vec<ObjectId> = arr.iter()
                         .filter_map(|v| if let GcValue::Ref(r) = v { Some(*r) } else { None })
                         .collect();
-                    drop(h); // Release borrow before recursive call
+                    drop(h);
                     for child in refs {
                         self.mark(child);
                     }
@@ -212,18 +182,10 @@ mod tests {
     #[test]
     fn test_gc_collect() {
         let mut gc = GarbageCollector::new();
-        
-        // Allocate without adding to roots
         let id1 = gc.alloc_array(vec![]);
         let id2 = gc.alloc_array(vec![]);
-        
-        // Add only id1 to roots
         gc.add_root(id1);
-        
-        // Collect
         gc.collect();
-        
-        // id1 should survive, id2 should be collected
         assert!(gc.get(id1).is_some());
         assert!(gc.get(id2).is_none());
     }

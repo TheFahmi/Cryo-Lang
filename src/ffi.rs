@@ -1,9 +1,10 @@
 // Argon FFI Module - Foreign Function Interface
 // Load and call functions from dynamic libraries (.dll/.so)
 
+#![allow(dead_code)]
+
 use libloading::{Library, Symbol};
 use std::collections::HashMap;
-use std::ffi::{CString, c_void};
 
 /// Loaded dynamic libraries
 pub struct FfiManager {
