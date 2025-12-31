@@ -1,12 +1,14 @@
-# Argon Programming Language (v2.19.0)
+# Argon Programming Language (v2.20.0)
 ![Argon Logo](logo.png)
 
-Argon is a high-performance, **self-hosted** systems programming language that compiles directly to LLVM IR and Native Machine Code.
+Argon is a high-performance, **self-hosted** systems programming language that compiles directly to using custom Rust Interpreter.
 
 ## ✨ Highlights
 - **Self-Hosted**: Compiler written in Argon itself (`self-host/compiler.ar`)
 - **Verified**: Stage 1 (self-compiled) produces identical output when compiling itself
-- **Native Backend**: Uses LLVM for optimized native binary generation
+- **Native Backend**: Uses custom Rust-based interpreter/codegen for optimized execution
+- **Foreign Function Interface**: `extern "C"` support and raw pointers (`*i32`) (v2.20.0)
+- **Traits System**: Interface definitions (`trait`) and implementations (`impl Trait`) with polymorphism (v2.20.0)
 - **WebAssembly**: Compile to WASM for browser deployment (v2.19.0)
 - **Async/Await**: Asynchronous functions with `async fn` and `await` expressions (v2.18.0)
 - **Debugger**: Full GDB/LLDB support with DWARF debug info (v2.17.0)
@@ -15,223 +17,105 @@ Argon is a high-performance, **self-hosted** systems programming language that c
 - **IDE Support**: VS Code extension with full Language Server Protocol (v2.0.0)
 - **Package Manager**: APM with registry, git deps, and lock files (v2.10.0)
 - **Standard Library**: 21 modules (math, string, array, async, wasm, collections, etc)
-- **Methods**: Support for methods on structs (v2.5.0)
-- **Enums**: Enum types with pattern matching (v2.6.0)
-- **Modules**: Import system for code organization (v2.7.0)
-- **Structs**: Full struct support with definitions, instantiation, and field access (v2.4.0)
-- **Networking**: Built-in TCP Socket support (v2.1.0)
-- **Multi-threading**: Atomics, Mutex, and Thread support (v2.3.0)
-- **High Performance**: Tagged pointer optimization for fast integer arithmetic
+- **Enums & Match**: Enum types with pattern matching (v2.6.0)
+- **Structs & Methods**: OO-like programming support (v2.5.0)
+- **Networking & Threads**: Built-in TCP Socket and Multi-threading support
 
 ## Quick Start
-
-### Using APM (Recommended)
 ```bash
-# Create new project
-./apm.sh init my-app
-cd my-app
+# Build Rust Interpreter (v2.20.0)
+cargo build --release
+# Copy binary
+cp target/release/argon.exe argon_v220.exe
 
-# Install dependencies
-./apm.sh install
-
-# Build and run
-./apm.sh run
-```
-
-### Using Docker Toolchain
-```bash
-# Create MVC Backend skeleton
-./argon new my_api
-
-# Run (starts HTTP server on port 3000)
-./argon run my_api
-
-# Build only
-./argon build my_api
-```
-
-## 📦 Package Manager (APM)
-
-### Commands
-| Command | Description |
-|---------|-------------|
-| `apm init <name>` | Create new project |
-| `apm build` | Compile project |
-| `apm run` | Build and run |
-| `apm install` | Install dependencies |
-| `apm add <pkg>` | Add from registry |
-| `apm add user/repo --git` | Add from GitHub |
-| `apm add ../lib --path` | Add local dependency |
-| `apm search` | List available packages |
-| `apm publish` | Publish package |
-
-### Example: Adding Dependencies
-```bash
-# From GitHub
-apm add TheFahmi/json-utils --git
-
-# Local path
-apm add ../my-lib --path
-
-# Then import in your code
-import "deps/json-utils/lib/lib.ar";
-```
-
-## Project Structure
-```text
-my_app/
-├── argon.toml       # Project manifest
-├── argon.lock       # Lock file (generated)
-├── src/main.ar      # Entry point
-├── lib/             # Library code
-├── deps/            # Dependencies (installed)
-└── tests/           # Unit tests
+# Run Hello World
+./argon_v220.exe examples/hello.ar
+# Run FFI Example
+./argon_v220.exe examples/ffi_example.ar
+# Run Traits Example
+./argon_v220.exe examples/traits_example.ar
 ```
 
 ## Language Features
+
+### Traits (v2.20.0)
+```javascript
+trait Printable {
+    fn to_string(self) -> string;
+}
+
+struct Point { x: int, y: int }
+
+impl Printable for Point {
+    fn to_string(self) -> string {
+        return "Point(" + self.x + ", " + self.y + ")";
+    }
+}
+
+fn print_it<T: Printable>(obj: T) {
+    print(obj.to_string());
+}
+```
+
+### FFI (Foreign Function Interface) (v2.20.0)
+```javascript
+extern "C" {
+    fn malloc(size: i64) -> *void;
+    fn free(ptr: *void);
+}
+
+fn main() {
+    let ptr = malloc(1024);
+    // ... use ptr ...
+    free(ptr);
+}
+```
 
 ### Modules & Imports (v2.7.0)
 ```javascript
 // math_utils.ar
 fn math_add(a, b) { return a + b; }
-fn math_mul(a, b) { return a * b; }
 
-// main.ar - Import all
+// main.ar
 import "math_utils.ar";
-
-// Or selective import
-import {math_add} from "math_utils.ar";
-
-fn main() {
-    print(math_add(5, 3)); // 8
-}
-```
-
-### Enums & Pattern Matching (v2.6.0)
-```javascript
-enum Result {
-    Ok(val),
-    Err(msg)
-}
-
-fn main() {
-    let res = Ok(42);
-    match res {
-        Ok(n) => {
-            print("Value: " + n);
-        },
-        Err(e) => {
-            print("Error: " + e);
-        }
-    }
-}
+fn main() { print(math_add(5, 3)); }
 ```
 
 ### Methods (v2.5.0)
 ```javascript
-struct Circle {
-    radius: int
-}
-
+struct Circle { radius: int }
 impl Circle {
-    fn area(self) {
-        return 3 * self.radius * self.radius;
-    }
-}
-
-fn main() {
-    let c = Circle { radius: 10 };
-    print(c.area()); // 300
+    fn area(self) { return 3 * self.radius * self.radius; }
 }
 ```
-
-### Structs (v2.4.0)
-```javascript
-struct Point {
-    x: int,
-    y: int
-}
-
-fn main() {
-    let p = Point { x: 10, y: 20 };
-    print(p.x);  // 10
-    print(p.y);  // 20
-}
-```
-
-### Standard Library (v2.7.2)
-| Module | Functions |
-|--------|-----------|
-| math | abs, min, max, pow, sqrt, gcd, lcm |
-| string | trim, split, join, replace, to_upper |
-| array | push, pop, map, filter, reduce |
-| datetime | now, format, is_leap_year |
-| regex | match, replace, is_email, glob |
-| process | command, spawn, execute |
-| crypto | hash, base64, hex |
-| ... | 18 modules total |
-
-### Networking (v2.1.0)
-| Function | Description |
-|----------|-------------|
-| `argon_listen(port)` | Bind to 0.0.0.0:port |
-| `argon_accept(server)` | Accept connection |
-| `argon_socket_read(client)` | Read data |
-| `argon_socket_write(client, data)` | Write data |
-| `argon_socket_close(client)` | Close connection |
-
-### Multi-threading (v2.3.0)
-| Function | Description |
-|----------|-------------|
-| `argon_thread_spawn(fn)` | Spawn thread |
-| `argon_thread_join(id)` | Wait for thread |
-| `argon_mutex_new()` | Create mutex |
-| `argon_atomic_new(v)` | Create atomic |
-| `argon_sleep(ms)` | Sleep |
-
-## Requirements
-- **Docker**: The toolchain runs inside the `argon-toolchain` image.
-- **Node.js** (optional): For LSP/VS Code extension
 
 ## Version History
+- **v2.20.0**: FFI (extern, pointers) and Traits (trait, impl, dynamic dispatch) support. New Rust Interpreter.
 - **v2.19.0**: WebAssembly target (compile to WASM, browser deployment, WASI support)
 - **v2.18.0**: Async/await support (`async fn`, `await` expressions)
 - **v2.17.0**: Debugger support (DWARF debug info, GDB integration, -g flag)
-- **v2.16.0**: Generic types with full monomorphization, fixed duplicate function bug, Rust interpreter bootstrap
-- **v2.15.0**: Generic type syntax support (`struct Box<T>`, `fn map<T>`)
-- **v2.14.1**: REPL interactive mode, system(), input() functions
-- **v2.14.0**: Full LSP implementation (Navigation, Editing, Autocomplete)
-- **v2.13.1**: Fixed chained field access and array indexing bugs
-- **v2.13.0**: Fixed NOT operator and runtime functions
-- **v2.12.0**: LSP basics and VS Code extension
-- **v2.11.0**: Collections module (Optional, Pair, Range, Stack, Queue)
-- **v2.10.0**: Package Manager with Central Registry
-- **v2.9.0**: APM with git dependencies and lock files
-- **v2.8.0**: APM basics (init, build, run, local deps)
-- **v2.7.2**: Added process and regex modules (18 stdlib modules)
-- **v2.7.0**: Module system / imports
-- **v2.6.0**: Enum types with pattern matching
-- **v2.5.0**: Methods on structs
-- **v2.4.0**: Struct support
-- **v2.3.0**: Multi-threading support
-- **v2.2.0**: Verified Self-Hosting
-- **v2.1.0**: Native Networking
-- **v1.0.0**: Self-Hosting Compiler
-
+- **v2.16.0**: Generic types with full monomorphization
+- **v2.15.0**: Generic type syntax support
+- **v2.14.0**: Full LSP implementation
+- **v2.10.0**: Package Manager (APM)
+- **v2.7.0**: Module system
+- **v2.6.0**: Enum types
+- **v2.5.0**: Struct Methods
+- **v2.3.0**: Multi-threading
+- **v2.1.0**: Networking
 
 ## Roadmap
 - [x] Self-Hosting Compiler ✅
 - [x] Networking & Multi-threading ✅
 - [x] Structs, Methods, Enums ✅
-- [x] Module system / imports ✅
 - [x] Standard library (21 modules) ✅
 - [x] Package Manager (APM) ✅
 - [x] LSP (Language Server Protocol) ✅
-- [x] REPL (interactive mode) ✅
-- [x] Generic types (`Box<T>`, `fn<T>`) ✅
-- [x] Debugger support (GDB/LLDB) ✅
+- [x] Generic types ✅
 - [x] Async/await ✅
 - [x] WebAssembly target ✅
-- [ ] FFI (Foreign Function Interface)
-- [ ] Traits/Interfaces
-
+- [x] FFI (Foreign Function Interface) ✅ (v2.20.0)
+- [x] Traits/Interfaces ✅ (v2.20.0)
+- [ ] Optimization (LTO, Constant Propagation)
+- [ ] Macros / Metaprogramming
+- [ ] Garbage Collection (Optional)
