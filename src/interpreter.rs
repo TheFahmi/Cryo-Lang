@@ -266,6 +266,117 @@ impl Interpreter {
         Ok(())
     }
 
+    /// Load module with selective imports
+    /// If names is empty, import everything (like `import "module"`)
+    /// If names has values, only import those (like `import { a, b } from "module"`)
+    fn load_module_selective(&mut self, path: &str, names: &[String]) -> Result<(), String> {
+        if self.loaded_modules.contains(path) { 
+            return Ok(()); 
+        }
+        
+        // Build search paths
+        let mut possible_paths = vec![];
+        if !self.base_path.is_empty() {
+            possible_paths.push(format!("{}/{}.ar", self.base_path, path));
+        }
+        possible_paths.push(format!("d:/rust/stdlib/{}.ar", path));
+        possible_paths.push(format!("stdlib/{}.ar", path));
+        possible_paths.push(format!("{}.ar", path));
+        possible_paths.push(format!("examples/{}.ar", path));
+        possible_paths.push(format!("libs/{}.ar", path));
+        
+        let mut source = String::new();
+        let mut found = false;
+        let mut used_path = String::new();
+        
+        for p in possible_paths {
+            if std::path::Path::new(&p).exists() {
+                source = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+                found = true;
+                used_path = p;
+                break;
+            }
+        }
+        
+        if !found { 
+            return Err(format!("Module not found: {}", path)); 
+        }
+        
+        self.loaded_modules.insert(path.to_string());
+        self.loaded_modules.insert(used_path.clone());
+        
+        // Parse the module
+        let tokens = crate::lexer::tokenize(&source);
+        let mut parser = crate::parser::Parser::new(tokens);
+        let ast = parser.parse()?;
+        
+        let mut expander = crate::expander::Expander::new();
+        let expanded = expander.expand(ast);
+        
+        let optimizer = crate::optimizer::Optimizer::new();
+        let final_ast = optimizer.optimize(expanded);
+        
+        // If no specific names requested, import everything
+        if names.is_empty() {
+            self.run(&final_ast)?;
+            return Ok(());
+        }
+        
+        // Selective import: only register requested items
+        let names_set: HashSet<&str> = names.iter().map(|s| s.as_str()).collect();
+        
+        for item in &final_ast {
+            match item {
+                TopLevel::Function(f) => {
+                    if names_set.contains(f.name.as_str()) {
+                        self.functions.insert(f.name.clone(), f.clone());
+                    }
+                }
+                TopLevel::Let(name, expr) => {
+                    if names_set.contains(name.as_str()) {
+                        let val = self.eval_expr(expr)?;
+                        self.globals.insert(name.clone(), val);
+                    }
+                }
+                TopLevel::Struct(s) => {
+                    // Structs are always available if imported
+                    if names_set.contains(s.name.as_str()) {
+                        // Struct is registered implicitly
+                    }
+                }
+                TopLevel::Trait(t) => {
+                    if names_set.contains(t.name.as_str()) {
+                        self.traits.insert(t.name.clone(), t.clone());
+                    }
+                }
+                TopLevel::Impl(impl_def) => {
+                    // Import impl blocks for relevant types
+                    if names_set.contains(impl_def.type_name.as_str()) {
+                        for method in &impl_def.methods {
+                            self.methods.insert(
+                                (impl_def.type_name.clone(), method.name.clone()), 
+                                method.clone()
+                            );
+                        }
+                        if !impl_def.trait_name.is_empty() {
+                            self.trait_impls.insert(
+                                (impl_def.type_name.clone(), impl_def.trait_name.clone()), 
+                                true
+                            );
+                        }
+                    }
+                }
+                // Handle nested imports
+                TopLevel::Import(nested_path, nested_names) => {
+                    self.load_module_selective(nested_path, nested_names)?;
+                }
+                _ => {}
+            }
+        }
+        
+        Ok(())
+    }
+
     pub fn run(&mut self, ast: &[TopLevel]) -> Result<Value, String> {
         for item in ast {
             match item {
@@ -285,8 +396,8 @@ impl Interpreter {
                         self.trait_impls.insert((impl_def.type_name.clone(), impl_def.trait_name.clone()), true);
                     }
                 }
-                TopLevel::Import(path, _) => {
-                    self.load_module(path)?;
+                TopLevel::Import(path, names) => {
+                    self.load_module_selective(path, names)?;
                 }
                 TopLevel::Macro(_) => {} // Macros already expanded
                 TopLevel::Struct(_) | TopLevel::Enum(_) | TopLevel::Extern(_) => {}

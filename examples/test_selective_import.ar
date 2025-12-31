@@ -1,0 +1,19 @@
+// Test selective imports
+// Syntax: import { function1, function2 } from "module"
+
+import { abs, max } from "math"
+
+fn main() {
+    print("=== Selective Import Test ===");
+    
+    // Test abs from math module
+    let x = -42;
+    print("abs(-42) = " + toString(abs(x)));
+    
+    // Test max from math module
+    let a = 10;
+    let b = 25;
+    print("max(10, 25) = " + toString(max(a, b)));
+    
+    print("=== Test Passed! ===");
+}
