@@ -2740,6 +2740,8 @@ fn wasm_add_local(name: string, typ: string) {
 
 fn wasm_find_local(name: string) {
     let i = 0;
+    let neg_one = 0;
+    neg_one = neg_one - 1;
     while (i < len(wasm_locals)) {
         let entry = wasm_locals[i];
         if (entry[0] == name) {
@@ -2747,7 +2749,7 @@ fn wasm_find_local(name: string) {
         }
         i = i + 1;
     }
-    return 0 - 1;
+    return neg_one;
 }
 
 fn wasm_add_string(s: string) {

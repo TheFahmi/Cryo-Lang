@@ -6,130 +6,106 @@
 |-------|--------|--------|
 | v2.16.0 | `argonc_v216` | ✅ Stable |
 | v2.18.0 | `argonc_v218` | ✅ Async/await |
-| v2.19.0 | `argonc_v219` | 🔄 WebAssembly (pending) |
+| v2.19.0 | `argonc_v219` | 🔄 Source ready, binary pending |
 
 ---
 
 ## Problem
 
-The Argon compiler has a bootstrap challenge: to compile the self-hosting compiler, you need a working compiler first. The Rust interpreter has a bug where it deletes output files after `clang` failures.
+The Argon compiler has a bootstrap challenge: to compile the self-hosting compiler, you need a working compiler first.
 
-### Root Causes
+### Bootstrap Challenges
 
-1. **Interpreter File Deletion Bug**: The Rust interpreter overwrites the input `.ar` file with LLVM IR, then calls `clang`. If `clang` fails, the interpreter deletes the file.
-
-2. **Duplicate Function Definition** (v2.15.0): `generate_specialized_funcs()` was defined twice, causing LLVM IR error.
+1. **Chicken-and-egg**: New compiler source needs new compiler binary to compile
+2. **Parser compatibility**: Old binary cannot parse new syntax
+3. **Rust interpreter needed**: For true bootstrap from scratch
 
 ---
 
-## Solution: Bootstrap New Compiler
+## Current Status (v2.19.0)
 
-### Method 1: Using Docker (Recommended)
+### What Works
+- ✅ Source code v2.19.0 with WebAssembly support complete
+- ✅ All documentation updated to v2.19.0
+- ✅ Docker image builds successfully
+- ✅ Existing programs run fine with current binary
+
+### What Doesn't Work
+- ❌ Current binary (shows v2.16.0) cannot parse v2.19.0 source
+- ❌ New syntax (@wasm_export, extern, etc) not recognized
+- ❌ No Rust interpreter in Docker image
+
+### Why This Happens
+The compiled binary in Docker (`argonc_v218`) was built with the Rust interpreter and shows v2.16.0 banner. It cannot parse:
+- `@` attribute syntax (@wasm_export, @wasm_import)
+- `extern` keyword
+- New WASM codegen functions
+
+---
+
+## Solutions
+
+### Option 1: Use Rust Interpreter (Recommended for new bootstrap)
+
+Requires building the Rust interpreter from source:
 
 ```bash
-# Build dengan Dockerfile yang sudah ada
-docker build -t argon-toolchain .
+# Clone and build Rust interpreter
+git clone https://github.com/TheFahmi/argon-lang
+cd argon-lang
+cargo build --release
 
-# Test compiler
-docker run --rm argon-toolchain argonc --version
-# Output: Argon Compiler v2.18.0
+# Use interpreter to compile v2.19.0 source
+./target/release/argon self-host/compiler.ar
 ```
 
-### Method 2: Manual Bootstrap dengan inotifywait
+### Option 2: Keep Current Binary
 
-Jika perlu bootstrap binary baru dari source:
+For normal usage, the current binary works fine:
+- Compiles all user programs
+- Runs examples
+- Only issue is inability to compile newer compiler source
 
 ```bash
-# 1. Jalankan di dalam Docker container
-docker run -it --rm -v $(pwd):/workspace argon-toolchain bash
+# This still works
+./argon.sh run examples/hello.ar
+./argon.sh run examples/async_example.ar
+```
 
-# 2. Copy compiler source ke /app
-cp /workspace/self-host/compiler.ar /app/src.ar
+### Option 3: Incremental Bootstrap
 
-# 3. Setup inotifywait untuk capture LLVM IR
+1. Create minimal changes that old parser can handle
+2. Bootstrap intermediate version
+3. Use intermediate to compile final version
+
+---
+
+## How Binary was Made
+
+The binaries were created using the **inotifywait trick**:
+
+```bash
+# Run inside Docker with Rust interpreter
+docker run -it --rm -v $(pwd):/workspace rust-interpreter bash
+
+# Setup inotifywait to capture LLVM IR
 inotifywait -m -e modify /app/src.ar --format "%w%f" 2>/dev/null | while read f; do
     cp /app/src.ar /app/compiler.ll 2>/dev/null
 done &
 
-# 4. Jalankan interpreter untuk generate LLVM IR
+# Run interpreter
 sleep 1
-/app/argon --emit-llvm /app/src.ar || true
+./argon --emit-llvm /app/src.ar || true
 sleep 1
-
-# 5. Kill inotifywait
 kill %1 2>/dev/null
 
-# 6. Compile LLVM IR ke binary
+# Compile LLVM IR to binary
 clang++ -O2 -Wno-override-module \
     /app/compiler.ll \
     /usr/lib/libruntime_argon.a \
     -lpthread -ldl \
-    -o /workspace/self-host/argonc_new
-
-# 7. Test binary baru
-/workspace/self-host/argonc_new --version
+    -o argonc_new
 ```
-
-### Method 3: Fix di Dockerfile
-
-```dockerfile
-# Capture LLVM IR dengan inotifywait trick
-RUN bash -c ' \
-    inotifywait -m -e modify /app/src.ar --format "%w%f" 2>/dev/null | while read f; do \
-        cp /app/src.ar /app/compiler.ll 2>/dev/null; \
-    done & \
-    sleep 1; \
-    /app/argon --emit-llvm /app/src.ar || true; \
-    sleep 1; \
-    kill %1 2>/dev/null \
-'
-
-# Compile ke binary
-RUN clang++ -O2 -Wno-override-module \
-    /app/compiler.ll \
-    /usr/lib/libruntime_argon.a \
-    -lpthread -ldl \
-    -o /usr/bin/argonc
-```
-
----
-
-## Troubleshooting
-
-### Error: "invalid redefinition of function"
-**Cause**: Duplicate function di `compiler.ar`
-**Fix**: Hapus salah satu definisi function yang duplikat
-
-```bash
-# Cari duplicate
-grep -n "fn generate_specialized_funcs" self-host/compiler.ar
-```
-
-### Error: File hilang setelah compile
-**Cause**: Interpreter menghapus file setelah clang gagal
-**Fix**: Gunakan inotifywait trick untuk capture file sebelum dihapus
-
-### Error: "undefined reference to argon_*"
-**Cause**: Runtime library tidak di-link
-**Fix**: Pastikan link dengan `-lpthread -ldl` dan `libruntime_argon.a`
-
-### Banner menunjukkan versi lama
-**Cause**: Rust interpreter punya hardcoded version string
-**Note**: Ini kosmetik saja, functionality tetap versi baru
-
----
-
-## Current Compiler Binaries
-
-### argonc_v218 (Latest)
-- **Features**: async/await, generics, debugger, networking
-- **File**: `self-host/argonc_v218`
-- **Dockerfile**: Uses this by default
-
-### argonc_v216 (Stable)
-- **Features**: generics, debugger, networking
-- **File**: `self-host/argonc_v216`
-- **Use for**: Fallback jika v218 bermasalah
 
 ---
 
@@ -137,22 +113,36 @@ grep -n "fn generate_specialized_funcs" self-host/compiler.ar
 
 | File | Description |
 |------|-------------|
-| `self-host/compiler.ar` | Source code compiler v2.19.0 |
-| `self-host/argonc_v219` | Compiled binary v2.19.0 (pending) |
-| `self-host/argonc_v218` | Compiled binary v2.18.0 |
-| `self-host/argonc_v216` | Compiled binary v2.16.0 |
-| `Dockerfile` | Build script dengan bootstrap |
-| `stdlib/*.ar` | Standard library modules |
+| `self-host/compiler.ar` | Source v2.19.0 (WebAssembly) |
+| `self-host/argonc_v218` | Binary (banner shows v2.16.0) |
+| `self-host/argonc_v216` | Older binary |
+| `self-host/wasm_codegen.ar` | Standalone WASM generator |
+| `Dockerfile` | Docker build |
 
 ---
 
 ## Version History
 
-- **v2.19.0**: WebAssembly target, WASM codegen
-- **v2.18.0**: Async/await support
-- **v2.17.0**: Debugger support  
-- **v2.16.0**: Fixed duplicate function, generic types
-- **v2.15.0**: Original with bootstrap bug
+- **v2.19.0**: WebAssembly source ready
+- **v2.18.0**: Async/await
+- **v2.17.0**: Debugger
+- **v2.16.0**: Generics, current binary
+
+---
+
+## Troubleshooting
+
+### Parse error: unexpected token
+**Cause**: Old binary cannot parse new syntax
+**Solution**: Need new binary from Rust interpreter
+
+### Error: argon not found
+**Cause**: Rust interpreter not in Docker image
+**Solution**: Build from source or use compiled binary
+
+### Banner shows wrong version
+**Cause**: Hardcoded in Rust interpreter at build time
+**Note**: Cosmetic only, functionality is correct
 
 ---
 
@@ -162,15 +152,9 @@ grep -n "fn generate_specialized_funcs" self-host/compiler.ar
 # Build Docker image
 docker build -t argon-toolchain .
 
-# Run program
+# Run program (works with current binary)
 ./argon.sh run examples/hello.ar
 
-# Compile program
-./argon.sh build examples/hello.ar -o hello
-
-# Run async example
-./argon.sh run examples/async_example.ar
-
-# Check compiler version
-docker run --rm argon-toolchain argonc --version
+# Check what version is running
+docker run --rm argon-toolchain head -c 100 /usr/bin/argonc
 ```
