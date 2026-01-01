@@ -5,7 +5,7 @@
 pub enum Token {
     // Keywords
     Fn, Let, Return, If, Else, While, Print, True, False,
-    Break, Continue, Struct, Enum, Match, Import, From,
+    Break, Continue, Struct, Enum, Match, Import,
     Async, Await, Extern, Defer, Macro,
     // FFI & Traits keywords
     Trait, Impl, For, SelfType,
@@ -332,7 +332,7 @@ impl Lexer {
                         "enum" => Token::Enum,
                         "match" => Token::Match,
                         "import" => Token::Import,
-                        "from" => Token::From,
+                        // Note: "from" is now treated as identifier, parser handles import syntax
                         "async" => Token::Async,
                         "await" => Token::Await,
                         "extern" => Token::Extern,

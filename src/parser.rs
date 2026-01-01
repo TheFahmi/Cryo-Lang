@@ -294,9 +294,15 @@ impl Parser {
         self.expect(Token::LParen)?;
         let mut params = Vec::new();
         while self.peek() != &Token::RParen {
+            // Parse parameter name - allow SelfType as well
             let pname = match self.advance() {
                 Token::Identifier(s) => s,
-                _ => break,
+                Token::SelfType => "self".to_string(),
+                _t => {
+                    // Return the token so we exit cleanly
+                    self.pos -= 1; // Put token back
+                    break;
+                }
             };
             let mut ptype = None;
             if self.match_token(&Token::Colon) {
@@ -332,18 +338,29 @@ impl Parser {
     }
     
     fn parse_type(&mut self) -> Result<String, String> {
+        // Handle pointer types *T
         if self.match_token(&Token::Star) {
             let inner = self.parse_type()?;
             return Ok(format!("*{}", inner));
         }
+        
+        // Handle Self type
         if self.match_token(&Token::SelfType) {
             return Ok("Self".to_string());
         }
         
+        // Handle array types [T]
+        if self.match_token(&Token::LBracket) {
+            let inner = self.parse_type()?;
+            self.expect(Token::RBracket)?;
+            return Ok(format!("[{}]", inner));
+        }
+        
         let mut typ = match self.advance() {
             Token::Identifier(s) => s,
-            _ => return Err("Expected type".to_string()),
+            t => return Err(format!("Expected type, got {:?}", t)),
         };
+        
         // Handle generic types like Box<T>
         if self.peek() == &Token::Lt {
             typ.push('<');
@@ -523,7 +540,11 @@ impl Parser {
                 self.match_token(&Token::Comma);
             }
             self.advance();
-            self.expect(Token::From)?;
+            // Expect "from" keyword (now as identifier)
+            match self.peek() {
+                Token::Identifier(s) if s == "from" => { self.advance(); }
+                _ => return Err("Expected 'from' after import block".to_string()),
+            }
         }
         
         let path = match self.advance() {
