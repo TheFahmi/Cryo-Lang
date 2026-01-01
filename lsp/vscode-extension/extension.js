@@ -21,7 +21,7 @@ function activate(context) {
     const clientOptions = {
         documentSelector: [{ scheme: 'file', language: 'cryo' }],
         synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.ar')
+            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.cryo')
         }
     };
 
