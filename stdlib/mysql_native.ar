@@ -1,9 +1,9 @@
 // ============================================
 // ARGON MYSQL CLIENT (Native Implementation)
-// MySQL Wire Protocol
+// MySQL Wire Protocol with mysql_native_password
 // ============================================
 
-let MYSQL_VERSION = "1.0.0";
+let MYSQL_VERSION = "1.1.0";
 
 // Connection struct
 struct MySqlConnection {
@@ -14,7 +14,7 @@ struct MySqlConnection {
     user: string,
     database: string,
     server_version: string,
-    capabilities: int
+    scramble: any  // Auth data from server
 }
 
 // Query result
@@ -31,7 +31,6 @@ struct MySqlResult {
 // ============================================
 
 fn int32_to_bytes_le(n) {
-    // Little-endian for MySQL
     let bytes = [];
     push(bytes, n % 256);
     push(bytes, (n / 256) % 256);
@@ -48,20 +47,8 @@ fn int24_to_bytes_le(n) {
     return bytes;
 }
 
-fn bytes_to_int32_le(bytes, offset) {
-    let b0 = bytes[offset];
-    let b1 = bytes[offset + 1];
-    let b2 = bytes[offset + 2];
-    let b3 = bytes[offset + 3];
-    return b0 + b1 * 256 + b2 * 65536 + b3 * 16777216;
-}
-
 fn bytes_to_int24_le(bytes, offset) {
     return bytes[offset] + bytes[offset + 1] * 256 + bytes[offset + 2] * 65536;
-}
-
-fn bytes_to_int16_le(bytes, offset) {
-    return bytes[offset] + bytes[offset + 1] * 256;
 }
 
 fn append_bytes(dest, src) {
@@ -92,15 +79,42 @@ fn read_null_string(bytes, offset) {
     return @bytes_to_string(result);
 }
 
-fn read_length_encoded_string(bytes, offset) {
-    let length = bytes[offset];
-    let result = [];
-    let i = 0;
-    while (i < length && (offset + 1 + i) < len(bytes)) {
-        push(result, bytes[offset + 1 + i]);
+fn find_null(bytes, offset) {
+    let i = offset;
+    while (i < len(bytes) && bytes[i] != 0) {
         i = i + 1;
     }
-    return @bytes_to_string(result);
+    return i;
+}
+
+// ============================================
+// mysql_native_password AUTH
+// ============================================
+
+fn compute_auth_response(password, scramble) {
+    // mysql_native_password algorithm:
+    // SHA1(password) XOR SHA1(scramble + SHA1(SHA1(password)))
+    
+    if (password == "" || len(scramble) == 0) {
+        return [];  // Empty password = empty auth response
+    }
+    
+    // Step 1: SHA1(password)
+    let pass_hash1 = @sha1_bytes(password);
+    
+    // Step 2: SHA1(SHA1(password))
+    let pass_hash2 = @sha1_bytes(pass_hash1);
+    
+    // Step 3: Concatenate scramble + SHA1(SHA1(password))
+    let combined = @concat_bytes(scramble, pass_hash2);
+    
+    // Step 4: SHA1(scramble + SHA1(SHA1(password)))
+    let scramble_hash = @sha1_bytes(combined);
+    
+    // Step 5: XOR SHA1(password) with step 4
+    let auth_response = @xor_bytes(pass_hash1, scramble_hash);
+    
+    return auth_response;
 }
 
 // ============================================
@@ -126,7 +140,7 @@ fn mysql_connect(host, port, user, password, database) {
         user: user,
         database: database,
         server_version: "",
-        capabilities: 0
+        scramble: []
     };
     
     // Read initial handshake packet
@@ -158,7 +172,6 @@ fn read_handshake(conn) {
     }
     
     let packet_len = bytes_to_int24_le(header, 0);
-    let seq = header[3];
     
     // Read packet body
     let body = @tcp_read_raw(conn.socket, packet_len);
@@ -174,30 +187,83 @@ fn read_handshake(conn) {
         return false;
     }
     
-    // Read server version (null-terminated)
+    // Find end of server version string
+    let ver_end = find_null(body, 1);
     conn.server_version = read_null_string(body, 1);
     print("[MySQL] Server version: " + conn.server_version);
+    
+    // Parse rest of handshake
+    // After null-terminated version: 4 bytes conn_id + 8 bytes scramble1 + 1 filler
+    let pos = ver_end + 1;
+    // Skip connection id (4 bytes)
+    pos = pos + 4;
+    
+    // Read first 8 bytes of scramble
+    let scramble1 = [];
+    let i = 0;
+    while (i < 8 && pos + i < len(body)) {
+        push(scramble1, body[pos + i]);
+        i = i + 1;
+    }
+    pos = pos + 8;
+    
+    // Skip filler (1 byte)
+    pos = pos + 1;
+    
+    // Skip capability flags lower (2 bytes)
+    pos = pos + 2;
+    
+    // Skip character set (1 byte)
+    pos = pos + 1;
+    
+    // Skip status flags (2 bytes)
+    pos = pos + 2;
+    
+    // Skip capability flags upper (2 bytes)
+    pos = pos + 2;
+    
+    // Skip auth_plugin_data_len (1 byte)
+    let auth_len = body[pos];
+    pos = pos + 1;
+    
+    // Skip reserved (10 bytes)
+    pos = pos + 10;
+    
+    // Read rest of scramble (12 bytes for mysql_native_password)
+    let scramble2 = [];
+    i = 0;
+    while (i < 12 && pos + i < len(body)) {
+        push(scramble2, body[pos + i]);
+        i = i + 1;
+    }
+    
+    // Combine scramble1 + scramble2 (20 bytes total)
+    conn.scramble = [];
+    append_bytes(conn.scramble, scramble1);
+    append_bytes(conn.scramble, scramble2);
+    
+    print("[MySQL] Scramble length: " + len(conn.scramble));
     
     return true;
 }
 
 fn send_auth_response(conn, user, password, database) {
-    // Build HandshakeResponse41 packet
-    // For simplicity, using mysql_native_password without actual hashing
-    // This works when MySQL is configured with mysql_native_password
+    // Compute authentication hash
+    let auth_data = compute_auth_response(password, conn.scramble);
+    print("[MySQL] Auth data length: " + len(auth_data));
     
     let packet = [];
     
-    // Client capabilities (simplified)
-    // CLIENT_PROTOCOL_41 | CLIENT_CONNECT_WITH_DB | CLIENT_SECURE_CONNECTION
-    let caps = 524805;
+    // Client capabilities (decimal = 0x000A0285)
+    // CLIENT_PROTOCOL_41 | CLIENT_SECURE_CONNECTION | CLIENT_CONNECT_WITH_DB | CLIENT_PLUGIN_AUTH
+    let caps = 656005;  // 0x000A0285 in decimal
     append_bytes(packet, int32_to_bytes_le(caps));
     
     // Max packet size
     append_bytes(packet, int32_to_bytes_le(16777215));
     
-    // Character set (utf8mb4 = 255)
-    push(packet, 255);
+    // Character set (utf8mb4 = 45)
+    push(packet, 45);
     
     // Reserved 23 bytes
     let i = 0;
@@ -209,13 +275,14 @@ fn send_auth_response(conn, user, password, database) {
     // Username (null-terminated)
     append_null_string(packet, user);
     
-    // Auth response (empty for now - requires proper hashing)
-    push(packet, 0);  // Zero-length auth response
+    // Auth response (length-encoded)
+    push(packet, len(auth_data));
+    append_bytes(packet, auth_data);
     
     // Database (null-terminated)
     append_null_string(packet, database);
     
-    // Auth plugin name
+    // Auth plugin name (null-terminated)
     append_null_string(packet, "mysql_native_password");
     
     // Build final packet with header
@@ -243,12 +310,71 @@ fn send_auth_response(conn, user, password, database) {
             print("[MySQL] Authentication OK");
             return true;
         } else if (status == 255) {
-            print("[MySQL] Auth error from server");
+            // Error packet - try to read error message
+            let err_msg = "";
+            if (len(resp_body) > 9) {
+                err_msg = read_null_string(resp_body, 9);
+            }
+            print("[MySQL] Auth error: " + err_msg);
             return false;
         } else if (status == 254) {
-            print("[MySQL] Auth switch requested (not supported)");
-            return false;
+            print("[MySQL] Auth switch requested");
+            // Handle auth switch - resend with new plugin
+            return handle_auth_switch(conn, password, resp_body);
         }
+    }
+    
+    return false;
+}
+
+fn handle_auth_switch(conn, password, switch_packet) {
+    // Auth switch packet format: 0xFE + plugin_name (null) + scramble
+    let pos = 1;
+    let plugin_end = find_null(switch_packet, pos);
+    let plugin_name = read_null_string(switch_packet, pos);
+    print("[MySQL] Switching to plugin: " + plugin_name);
+    
+    pos = plugin_end + 1;
+    
+    // Read new scramble
+    let new_scramble = [];
+    while (pos < len(switch_packet) && switch_packet[pos] != 0) {
+        push(new_scramble, switch_packet[pos]);
+        pos = pos + 1;
+    }
+    
+    print("[MySQL] New scramble length: " + len(new_scramble));
+    
+    // Compute auth with new scramble
+    let auth_data = compute_auth_response(password, new_scramble);
+    
+    // Send auth response
+    let packet = [];
+    append_bytes(packet, auth_data);
+    
+    let final_packet = [];
+    append_bytes(final_packet, int24_to_bytes_le(len(packet)));
+    push(final_packet, 3);  // Sequence 3
+    append_bytes(final_packet, packet);
+    
+    @tcp_write_raw(conn.socket, final_packet);
+    
+    // Read final response
+    let resp_header = @tcp_read_raw(conn.socket, 4);
+    if (len(resp_header) < 4) {
+        return false;
+    }
+    
+    let resp_len = bytes_to_int24_le(resp_header, 0);
+    let resp_body = @tcp_read_raw(conn.socket, resp_len);
+    
+    if (len(resp_body) > 0 && resp_body[0] == 0) {
+        print("[MySQL] Authentication OK (after switch)");
+        return true;
+    }
+    
+    if (len(resp_body) > 9) {
+        print("[MySQL] Final auth error: " + read_null_string(resp_body, 9));
     }
     
     return false;
@@ -309,16 +435,16 @@ fn mysql_query(conn, sql) {
         } else if (status == 255) {
             // Error packet
             result.error = "Query error";
-            print("[MySQL] Query error");
+            if (len(resp_body) > 9) {
+                result.error = read_null_string(resp_body, 9);
+            }
+            print("[MySQL] Error: " + result.error);
         } else {
             // Result set
             let num_cols = status;
             result.columns = num_cols;
             print("[MySQL] Result set with " + num_cols + " columns");
             result.success = true;
-            
-            // Skip column definitions and read rows (simplified)
-            // Full implementation would parse all packets
         }
     }
     

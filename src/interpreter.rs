@@ -681,6 +681,61 @@ impl Interpreter {
                 }
                 return Ok(Value::Array(Rc::new(RefCell::new(Vec::new()))));
             }
+            "sha1" | "sha1_hash" => {
+                // SHA1 hash - returns hex string
+                if let Some(Value::String(s)) = args.first() {
+                    let hash = sha1_digest(s.as_bytes());
+                    let hex: String = hash.iter().map(|b| format!("{:02x}", b)).collect();
+                    return Ok(Value::String(hex));
+                }
+                return Ok(Value::String("".to_string()));
+            }
+            "sha1_bytes" => {
+                // SHA1 hash - returns byte array (20 bytes)
+                if let Some(Value::Array(arr)) = args.first() {
+                    let bytes: Vec<u8> = arr.borrow().iter().filter_map(|v| {
+                        if let Value::Int(n) = v { Some(*n as u8) } else { None }
+                    }).collect();
+                    let hash = sha1_digest(&bytes);
+                    let result: Vec<Value> = hash.iter().map(|b| Value::Int(*b as i64)).collect();
+                    return Ok(Value::Array(Rc::new(RefCell::new(result))));
+                }
+                // Also handle string input
+                if let Some(Value::String(s)) = args.first() {
+                    let hash = sha1_digest(s.as_bytes());
+                    let result: Vec<Value> = hash.iter().map(|b| Value::Int(*b as i64)).collect();
+                    return Ok(Value::Array(Rc::new(RefCell::new(result))));
+                }
+                return Ok(Value::Array(Rc::new(RefCell::new(Vec::new()))));
+            }
+            "xor_bytes" => {
+                // XOR two byte arrays
+                if args.len() >= 2 {
+                    if let (Value::Array(a), Value::Array(b)) = (&args[0], &args[1]) {
+                        let arr_a = a.borrow();
+                        let arr_b = b.borrow();
+                        let mut result = Vec::new();
+                        for i in 0..arr_a.len().min(arr_b.len()) {
+                            if let (Value::Int(x), Value::Int(y)) = (&arr_a[i], &arr_b[i]) {
+                                result.push(Value::Int((*x as u8 ^ *y as u8) as i64));
+                            }
+                        }
+                        return Ok(Value::Array(Rc::new(RefCell::new(result))));
+                    }
+                }
+                return Ok(Value::Array(Rc::new(RefCell::new(Vec::new()))));
+            }
+            "concat_bytes" => {
+                // Concatenate two byte arrays
+                if args.len() >= 2 {
+                    if let (Value::Array(a), Value::Array(b)) = (&args[0], &args[1]) {
+                        let mut result: Vec<Value> = a.borrow().clone();
+                        result.extend(b.borrow().iter().cloned());
+                        return Ok(Value::Array(Rc::new(RefCell::new(result))));
+                    }
+                }
+                return Ok(Value::Array(Rc::new(RefCell::new(Vec::new()))));
+            }
             "argon_accept" => {
                 if let Some(Value::Int(id)) = args.first() {
                     if let Some(listener) = self.listeners.get(id) {
@@ -1701,4 +1756,90 @@ fn base64_decode_simple(s: &str) -> Option<String> {
     }
     
     String::from_utf8(result).ok()
+}
+
+// SHA1 implementation for MySQL authentication
+fn sha1_digest(data: &[u8]) -> [u8; 20] {
+    // SHA1 constants
+    let h0: u32 = 0x67452301;
+    let h1: u32 = 0xEFCDAB89;
+    let h2: u32 = 0x98BADCFE;
+    let h3: u32 = 0x10325476;
+    let h4: u32 = 0xC3D2E1F0;
+
+    let mut h = [h0, h1, h2, h3, h4];
+    
+    // Pre-processing: adding padding bits
+    let ml = (data.len() as u64) * 8;
+    let mut msg = data.to_vec();
+    msg.push(0x80);
+    
+    while (msg.len() % 64) != 56 {
+        msg.push(0x00);
+    }
+    
+    // Append original length in bits as 64-bit big-endian
+    for i in (0..8).rev() {
+        msg.push(((ml >> (i * 8)) & 0xff) as u8);
+    }
+    
+    // Process each 64-byte chunk
+    for chunk in msg.chunks(64) {
+        let mut w = [0u32; 80];
+        
+        // Break chunk into sixteen 32-bit big-endian words
+        for i in 0..16 {
+            w[i] = ((chunk[i * 4] as u32) << 24)
+                | ((chunk[i * 4 + 1] as u32) << 16)
+                | ((chunk[i * 4 + 2] as u32) << 8)
+                | (chunk[i * 4 + 3] as u32);
+        }
+        
+        // Extend the sixteen 32-bit words into eighty 32-bit words
+        for i in 16..80 {
+            w[i] = (w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16]).rotate_left(1);
+        }
+        
+        let mut a = h[0];
+        let mut b = h[1];
+        let mut c = h[2];
+        let mut d = h[3];
+        let mut e = h[4];
+        
+        for i in 0..80 {
+            let (f, k) = match i {
+                0..=19 => ((b & c) | ((!b) & d), 0x5A827999u32),
+                20..=39 => (b ^ c ^ d, 0x6ED9EBA1u32),
+                40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1BBCDCu32),
+                _ => (b ^ c ^ d, 0xCA62C1D6u32),
+            };
+            
+            let temp = a.rotate_left(5)
+                .wrapping_add(f)
+                .wrapping_add(e)
+                .wrapping_add(k)
+                .wrapping_add(w[i]);
+            e = d;
+            d = c;
+            c = b.rotate_left(30);
+            b = a;
+            a = temp;
+        }
+        
+        h[0] = h[0].wrapping_add(a);
+        h[1] = h[1].wrapping_add(b);
+        h[2] = h[2].wrapping_add(c);
+        h[3] = h[3].wrapping_add(d);
+        h[4] = h[4].wrapping_add(e);
+    }
+    
+    // Produce the final hash value (big-endian)
+    let mut result = [0u8; 20];
+    for i in 0..5 {
+        result[i * 4] = (h[i] >> 24) as u8;
+        result[i * 4 + 1] = (h[i] >> 16) as u8;
+        result[i * 4 + 2] = (h[i] >> 8) as u8;
+        result[i * 4 + 3] = h[i] as u8;
+    }
+    result
 }

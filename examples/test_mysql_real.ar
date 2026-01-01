@@ -30,6 +30,16 @@ fn main() {
     print("==========================================");
     print("");
     
+    // Select database first
+    print("[0] Selecting database...");
+    let use_db = mysql_query(conn, "USE argondb");
+    if (use_db.success) {
+        print("    [PASS] Database selected!");
+    } else {
+        print("    [FAIL] Could not select database: " + use_db.error);
+    }
+    print("");
+    
     // Test 1: Create table
     print("[1] Creating test table...");
     let result1 = mysql_query(conn, "DROP TABLE IF EXISTS argon_test");
