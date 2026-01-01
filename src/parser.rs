@@ -20,6 +20,7 @@ pub enum Expr {
     Field(Box<Expr>, String),
     Array(Vec<Expr>),
     StructInit(String, Vec<(String, Expr)>),
+    ObjectLiteral(Vec<(String, Expr)>),  // Anonymous object: { key: value }
     Await(Box<Expr>),
     StaticMethodCall(String, String, Vec<Expr>),
 }
@@ -949,6 +950,34 @@ impl Parser {
                 let args = self.parse_args()?;
                 self.expect(Token::RParen)?;
                 Ok(Expr::Call(name, args))
+            }
+            Token::LBrace => {
+                // Object literal: { key: value, key2: value2 }
+                self.advance();
+                let mut fields = Vec::new();
+                
+                while self.peek() != &Token::RBrace {
+                    // Parse key (identifier)
+                    let key = match self.advance() {
+                        Token::Identifier(s) => s,
+                        Token::String(s) => s,
+                        t => return Err(format!("Expected key in object literal, got {:?}", t)),
+                    };
+                    
+                    self.expect(Token::Colon)?;
+                    
+                    // Parse value
+                    let value = self.parse_expr()?;
+                    fields.push((key, value));
+                    
+                    // Optional comma
+                    if !self.match_token(&Token::Comma) {
+                        break;
+                    }
+                }
+                
+                self.expect(Token::RBrace)?;
+                Ok(Expr::ObjectLiteral(fields))
             }
             _ => {
                 Err(format!("Unexpected token: {:?}", self.peek()))

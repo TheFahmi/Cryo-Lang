@@ -1587,6 +1587,15 @@ impl Interpreter {
                 }
                 Ok(Value::Struct(name.clone(), Rc::new(RefCell::new(field_map))))
             },
+            Expr::ObjectLiteral(fields) => {
+                // Anonymous object - stored as struct with empty name
+                let mut field_map = HashMap::new();
+                for (fname, fexpr) in fields {
+                    let val = self.eval_expr(fexpr)?;
+                    field_map.insert(fname.clone(), val);
+                }
+                Ok(Value::Struct("".to_string(), Rc::new(RefCell::new(field_map))))
+            },
             Expr::Array(elems) => {
                 let vals: Vec<Value> = elems.iter().map(|e| self.eval_expr(e)).collect::<Result<_,_>>()?;
                 Ok(Value::Array(Rc::new(RefCell::new(vals))))

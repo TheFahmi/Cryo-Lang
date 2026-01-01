@@ -1,0 +1,33 @@
+// ============================================
+// TEST OBJECT LITERAL
+// ============================================
+
+fn main() {
+    print("=== Object Literal Test ===");
+    
+    // Test 1: Basic object
+    let obj = { name: "John", age: 30 };
+    print("Name: " + obj.name);
+    print("Age: " + obj.age);
+    
+    // Test 2: Nested object
+    let person = {
+        name: "Alice",
+        address: {
+            city: "Jakarta",
+            country: "Indonesia"
+        }
+    };
+    print("Person: " + person.name);
+    print("City: " + person.address.city);
+    
+    // Test 3: Object in function
+    let result = create_user("Bob", 25);
+    print("Created: " + result.name + ", " + result.age);
+    
+    print("=== All Tests PASSED! ===");
+}
+
+fn create_user(name, age) {
+    return { name: name, age: age, active: true };
+}
