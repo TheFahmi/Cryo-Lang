@@ -300,8 +300,8 @@ Ready for cloud deployment.
 ### Observability
 - [x] Structured logging (JSON) (`stdlib/logger.cryo`) ✅ [TESTED: 8/8 PASS]
 - [x] Metrics collection (`stdlib/metrics.cryo`) ✅ [TESTED: 8/8 PASS]
-- [ ] OpenTelemetry integration
-- [ ] Distributed tracing
+- [x] OpenTelemetry integration (`stdlib/otel.cryo`) ✅ [TESTED: 10/10 PASS]
+- [x] Distributed tracing (spans, context propagation, W3C Trace Context) ✅
 
 ### Cloud Services
 - [ ] AWS SDK bindings

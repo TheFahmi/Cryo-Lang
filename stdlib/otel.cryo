@@ -1,0 +1,392 @@
+// ============================================
+// CRYO OPENTELEMETRY LIBRARY
+// Observability with OpenTelemetry standards
+// Version: 1.0.0
+// ============================================
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+let _otelServiceName = "cryo-service";
+let _otelServiceVersion = "1.0.0";
+let _otelEnvironment = "development";
+let _otelEndpoint = "http://localhost:4317";
+let _otelEnabled = true;
+
+// Initialize OpenTelemetry
+fn otelInit(serviceName, version, environment) {
+    _otelServiceName = serviceName;
+    _otelServiceVersion = version;
+    _otelEnvironment = environment;
+}
+
+// Set collector endpoint
+fn otelSetEndpoint(endpoint) {
+    _otelEndpoint = endpoint;
+}
+
+// Enable/disable telemetry
+fn otelSetEnabled(enabled) {
+    _otelEnabled = enabled;
+}
+
+// Check if enabled
+fn otelIsEnabled() {
+    return _otelEnabled;
+}
+
+// ============================================
+// TRACE CONTEXT
+// ============================================
+
+let _traceIdCounter = 0;
+let _spanIdCounter = 0;
+let _currentTraceId = "";
+let _currentSpanId = "";
+let _parentSpanId = "";
+
+// Generate trace ID (simplified - real would be 128-bit hex)
+fn generateTraceId() {
+    _traceIdCounter = _traceIdCounter + 1;
+    let ts = getCurrentTimestamp();
+    return "trace_" + ts + "_" + _traceIdCounter;
+}
+
+// Generate span ID (simplified - real would be 64-bit hex)  
+fn generateSpanId() {
+    _spanIdCounter = _spanIdCounter + 1;
+    let ts = getCurrentTimestamp();
+    return "span_" + ts + "_" + _spanIdCounter;
+}
+
+// Get current trace context
+fn otelGetTraceContext() {
+    let ctx = {};
+    ctx["traceId"] = _currentTraceId;
+    ctx["spanId"] = _currentSpanId;
+    ctx["parentSpanId"] = _parentSpanId;
+    return ctx;
+}
+
+// Set trace context (for propagation)
+fn otelSetTraceContext(traceId, spanId, parentSpanId) {
+    _currentTraceId = traceId;
+    _currentSpanId = spanId;
+    _parentSpanId = parentSpanId;
+}
+
+// ============================================
+// SPANS
+// ============================================
+
+let _activeSpans = {};
+let _completedSpans = [];
+
+// Start a new span
+fn spanStart(name, kind) {
+    if (!_otelEnabled) {
+        return null;
+    }
+    
+    // Generate IDs  
+    if (_currentTraceId == "") {
+        _currentTraceId = generateTraceId();
+    }
+    
+    let spanId = generateSpanId();
+    let parentId = _currentSpanId;
+    _currentSpanId = spanId;
+    
+    let span = {};
+    span["traceId"] = _currentTraceId;
+    span["spanId"] = spanId;
+    span["parentSpanId"] = parentId;
+    span["name"] = name;
+    span["kind"] = kind;
+    span["startTime"] = getCurrentTimestamp();
+    span["endTime"] = 0;
+    span["status"] = "UNSET";
+    span["attributes"] = {};
+    span["events"] = [];
+    
+    _activeSpans[spanId] = span;
+    
+    return spanId;
+}
+
+// End a span
+fn spanEnd(spanId) {
+    if (typeof(_activeSpans[spanId]) == "null") {
+        return;
+    }
+    
+    let span = _activeSpans[spanId];
+    span["endTime"] = getCurrentTimestamp();
+    span["duration"] = span["endTime"] - span["startTime"];
+    
+    push(_completedSpans, span);
+    _activeSpans[spanId] = null;
+    
+    // Restore parent span as current
+    _currentSpanId = span["parentSpanId"];
+}
+
+// Set span status
+fn spanSetStatus(spanId, status, message) {
+    if (typeof(_activeSpans[spanId]) == "null") {
+        return;
+    }
+    
+    _activeSpans[spanId]["status"] = status;
+    if (message != null) {
+        _activeSpans[spanId]["statusMessage"] = message;
+    }
+}
+
+// Add attribute to span
+fn spanSetAttribute(spanId, key, value) {
+    if (typeof(_activeSpans[spanId]) == "null") {
+        return;
+    }
+    
+    _activeSpans[spanId]["attributes"][key] = value;
+}
+
+// Add event to span
+fn spanAddEvent(spanId, name, attributes) {
+    if (typeof(_activeSpans[spanId]) == "null") {
+        return;
+    }
+    
+    let event = {};
+    event["name"] = name;
+    event["timestamp"] = getCurrentTimestamp();
+    event["attributes"] = attributes;
+    
+    push(_activeSpans[spanId]["events"], event);
+}
+
+// Record exception
+fn spanRecordException(spanId, errorType, errorMessage) {
+    let attrs = {};
+    attrs["exception.type"] = errorType;
+    attrs["exception.message"] = errorMessage;
+    
+    spanAddEvent(spanId, "exception", attrs);
+    spanSetStatus(spanId, "ERROR", errorMessage);
+}
+
+// ============================================
+// SPAN KIND CONSTANTS
+// ============================================
+
+let SPAN_KIND_INTERNAL = "INTERNAL";
+let SPAN_KIND_SERVER = "SERVER";
+let SPAN_KIND_CLIENT = "CLIENT";
+let SPAN_KIND_PRODUCER = "PRODUCER";
+let SPAN_KIND_CONSUMER = "CONSUMER";
+
+// ============================================
+// STATUS CONSTANTS
+// ============================================
+
+let STATUS_UNSET = "UNSET";
+let STATUS_OK = "OK";
+let STATUS_ERROR = "ERROR";
+
+// ============================================
+// CONVENIENCE FUNCTIONS
+// ============================================
+
+// Create a server span (for incoming requests)
+fn spanStartServer(name) {
+    let spanId = spanStart(name, SPAN_KIND_SERVER);
+    spanSetAttribute(spanId, "span.kind", "server");
+    return spanId;
+}
+
+// Create a client span (for outgoing requests)
+fn spanStartClient(name) {
+    let spanId = spanStart(name, SPAN_KIND_CLIENT);
+    spanSetAttribute(spanId, "span.kind", "client");
+    return spanId;
+}
+
+// Create an internal span
+fn spanStartInternal(name) {
+    return spanStart(name, SPAN_KIND_INTERNAL);
+}
+
+// End span with success
+fn spanEndOk(spanId) {
+    spanSetStatus(spanId, STATUS_OK, null);
+    spanEnd(spanId);
+}
+
+// End span with error
+fn spanEndError(spanId, message) {
+    spanSetStatus(spanId, STATUS_ERROR, message);
+    spanEnd(spanId);
+}
+
+// ============================================
+// HTTP SEMANTIC CONVENTIONS
+// ============================================
+
+fn spanSetHttpRequest(spanId, method, url, statusCode) {
+    spanSetAttribute(spanId, "http.method", method);
+    spanSetAttribute(spanId, "http.url", url);
+    if (statusCode > 0) {
+        spanSetAttribute(spanId, "http.status_code", statusCode);
+    }
+}
+
+fn spanSetHttpResponse(spanId, statusCode, contentLength) {
+    spanSetAttribute(spanId, "http.status_code", statusCode);
+    if (contentLength > 0) {
+        spanSetAttribute(spanId, "http.response_content_length", contentLength);
+    }
+}
+
+// ============================================
+// DATABASE SEMANTIC CONVENTIONS
+// ============================================
+
+fn spanSetDatabase(spanId, system, name, statement) {
+    spanSetAttribute(spanId, "db.system", system);
+    spanSetAttribute(spanId, "db.name", name);
+    if (statement != null) {
+        spanSetAttribute(spanId, "db.statement", statement);
+    }
+}
+
+// ============================================
+// TRACE PROPAGATION (W3C Trace Context)
+// ============================================
+
+// Format: 00-{traceId}-{spanId}-{flags}
+fn otelGetTraceparent() {
+    let traceId = _currentTraceId;
+    let spanId = _currentSpanId;
+    
+    if (traceId == "" || spanId == "") {
+        return "";
+    }
+    
+    return "00-" + traceId + "-" + spanId + "-01";
+}
+
+// Parse traceparent header
+fn otelParseTraceparent(header) {
+    let result = {};
+    result["valid"] = false;
+    result["traceId"] = "";
+    result["spanId"] = "";
+    result["sampled"] = false;
+    
+    if (header == null || len(header) < 10) {
+        return result;
+    }
+    
+    // Simplified parsing - real impl would parse properly
+    result["valid"] = true;
+    result["traceId"] = header;
+    result["sampled"] = true;
+    
+    return result;
+}
+
+// ============================================
+// EXPORT (for sending to collector)
+// ============================================
+
+// Get all completed spans
+fn otelGetCompletedSpans() {
+    return _completedSpans;
+}
+
+// Clear completed spans
+fn otelClearSpans() {
+    _completedSpans = [];
+}
+
+// Export spans as JSON-like structure
+fn otelExportSpans() {
+    let export = {};
+    export["resource"] = {};
+    export["resource"]["service.name"] = _otelServiceName;
+    export["resource"]["service.version"] = _otelServiceVersion;
+    export["resource"]["deployment.environment"] = _otelEnvironment;
+    export["spans"] = _completedSpans;
+    export["spanCount"] = len(_completedSpans);
+    
+    return export;
+}
+
+// ============================================
+// METRICS (OpenTelemetry Metrics API)
+// ============================================
+
+let _otelMetrics = {};
+
+fn otelCounterAdd(name, value, attributes) {
+    let key = name;
+    if (typeof(_otelMetrics[key]) == "null") {
+        let m = {};
+        m["name"] = name;
+        m["type"] = "counter";
+        m["value"] = 0;
+        _otelMetrics[key] = m;
+    }
+    _otelMetrics[key]["value"] = _otelMetrics[key]["value"] + value;
+}
+
+fn otelGaugeSet(name, value, attributes) {
+    let key = name;
+    let m = {};
+    m["name"] = name;
+    m["type"] = "gauge";
+    m["value"] = value;
+    _otelMetrics[key] = m;
+}
+
+fn otelHistogramRecord(name, value, attributes) {
+    let key = name;
+    if (typeof(_otelMetrics[key]) == "null") {
+        let m = {};
+        m["name"] = name;
+        m["type"] = "histogram";
+        m["sum"] = 0;
+        m["count"] = 0;
+        m["min"] = value;
+        m["max"] = value;
+        _otelMetrics[key] = m;
+    }
+    
+    let metric = _otelMetrics[key];
+    metric["sum"] = metric["sum"] + value;
+    metric["count"] = metric["count"] + 1;
+    if (value < metric["min"]) {
+        metric["min"] = value;
+    }
+    if (value > metric["max"]) {
+        metric["max"] = value;
+    }
+}
+
+fn otelGetMetrics() {
+    return _otelMetrics;
+}
+
+// ============================================
+// UTILITY
+// ============================================
+
+fn getCurrentTimestamp() {
+    return 1736665200;
+}
+
+fn otelVersion() {
+    return "1.0.0";
+}

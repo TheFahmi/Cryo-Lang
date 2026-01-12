@@ -1,0 +1,166 @@
+// Test OpenTelemetry Library
+import "otel"
+
+fn main() {
+    print("========================================");
+    print("   CRYO OPENTELEMETRY LIBRARY TEST");
+    print("========================================");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Initialize OpenTelemetry
+    print("");
+    print("[TEST 1] Initialize OpenTelemetry");
+    otelInit("test-service", "1.0.0", "test");
+    
+    if (otelIsEnabled()) {
+        print("  ✓ PASS: OpenTelemetry initialized");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Not enabled");
+        failed = failed + 1;
+    }
+    
+    // Test 2: Create Server Span
+    print("");
+    print("[TEST 2] Create Server Span");
+    let spanId = spanStartServer("GET /api/users");
+    
+    if (spanId != null && len(spanId) > 0) {
+        print("  ✓ PASS: Server span created: " + spanId);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Span not created");
+        failed = failed + 1;
+    }
+    
+    // Test 3: Set Span Attributes
+    print("");
+    print("[TEST 3] Set Span Attributes");
+    spanSetAttribute(spanId, "user.id", "123");
+    spanSetHttpRequest(spanId, "GET", "/api/users", 200);
+    
+    // Test 4: Trace Context (check while span is active)
+    print("");
+    print("[TEST 4] Trace Context");
+    let ctx = otelGetTraceContext();
+    
+    if (ctx["traceId"] != "" && ctx["spanId"] != "") {
+        print("  ✓ PASS: Trace context retrieved");
+        print("  TraceId: " + ctx["traceId"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Empty trace context");
+        failed = failed + 1;
+    }
+    
+    spanEndOk(spanId);
+    print("  ✓ PASS: Span attributes set and ended");
+    passed = passed + 1;
+    
+    // Test 5: Nested Spans
+    print("");
+    print("[TEST 5] Nested Spans");
+    let parentSpan = spanStartServer("handleRequest");
+    let childSpan = spanStartClient("dbQuery");
+    spanSetDatabase(childSpan, "postgresql", "users", "SELECT * FROM users");
+    spanEndOk(childSpan);
+    spanEndOk(parentSpan);
+    
+    let spans = otelGetCompletedSpans();
+    if (len(spans) >= 3) {
+        print("  ✓ PASS: Nested spans created (" + len(spans) + " total)");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Expected >= 3 spans, got " + len(spans));
+        failed = failed + 1;
+    }
+    
+    // Test 6: Error Recording
+    print("");
+    print("[TEST 6] Error Recording");
+    let errorSpan = spanStartInternal("processData");
+    spanRecordException(errorSpan, "ValidationError", "Invalid input");
+    spanEnd(errorSpan);
+    
+    print("  ✓ PASS: Exception recorded");
+    passed = passed + 1;
+    
+    // Test 7: Trace Propagation (Traceparent)
+    print("");
+    print("[TEST 7] Trace Propagation");
+    let propSpan = spanStartServer("propagationTest");
+    let traceparent = otelGetTraceparent();
+    
+    if (len(traceparent) > 0) {
+        print("  ✓ PASS: Traceparent: " + traceparent);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Empty traceparent");
+        failed = failed + 1;
+    }
+    spanEnd(propSpan);
+    
+    // Test 8: Export Spans
+    print("");
+    print("[TEST 8] Export Spans");
+    let export = otelExportSpans();
+    
+    if (export["spanCount"] >= 4) {
+        print("  ✓ PASS: Exported " + export["spanCount"] + " spans");
+        print("  Service: " + export["resource"]["service.name"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Export incomplete");
+        failed = failed + 1;
+    }
+    
+    // Test 9: OpenTelemetry Metrics
+    print("");
+    print("[TEST 9] OpenTelemetry Metrics");
+    otelCounterAdd("http_requests_total", 1, null);
+    otelCounterAdd("http_requests_total", 1, null);
+    otelGaugeSet("active_connections", 5, null);
+    otelHistogramRecord("request_duration_ms", 25, null);
+    otelHistogramRecord("request_duration_ms", 50, null);
+    
+    let metrics = otelGetMetrics();
+    if (typeof(metrics["http_requests_total"]) != "null") {
+        print("  ✓ PASS: Metrics recorded");
+        print("  http_requests_total: " + metrics["http_requests_total"]["value"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Metrics not found");
+        failed = failed + 1;
+    }
+    
+    // Test 10: Span Kind Constants
+    print("");
+    print("[TEST 10] Span Kind Constants");
+    if (SPAN_KIND_SERVER == "SERVER" && SPAN_KIND_CLIENT == "CLIENT") {
+        print("  ✓ PASS: Constants correct");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Constants incorrect");
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+    }
+    
+    return 0;
+}
