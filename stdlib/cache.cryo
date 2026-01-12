@@ -1,0 +1,322 @@
+// ============================================
+// CRYO CACHE LIBRARY
+// High-performance caching utilities
+// Version: 1.0.0
+// ============================================
+
+// ============================================
+// LRU CACHE IMPLEMENTATION
+// ============================================
+
+let _lruCache = {};
+let _lruOrder = [];
+let _lruMaxSize = 100;
+
+// Initialize LRU cache with max size
+fn lruInit(maxSize) {
+    _lruCache = {};
+    _lruOrder = [];
+    _lruMaxSize = maxSize;
+}
+
+// Get from LRU cache
+fn lruGet(key) {
+    let value = _lruCache[key];
+    if (typeof(value) != "null") {
+        // Move to front (most recently used)
+        lruMoveToFront(key);
+        return value;
+    }
+    return null;
+}
+
+// Set in LRU cache
+fn lruSet(key, value) {
+    // Check if key exists
+    if (typeof(_lruCache[key]) != "null") {
+        _lruCache[key] = value;
+        lruMoveToFront(key);
+        return;
+    }
+    
+    // Evict if at capacity
+    if (len(_lruOrder) >= _lruMaxSize) {
+        lruEvict();
+    }
+    
+    // Add new entry
+    _lruCache[key] = value;
+    push(_lruOrder, key);
+}
+
+// Check if key exists
+fn lruHas(key) {
+    return typeof(_lruCache[key]) != "null";
+}
+
+// Delete from cache
+fn lruDelete(key) {
+    if (typeof(_lruCache[key]) != "null") {
+        _lruCache[key] = null;
+        lruRemoveFromOrder(key);
+    }
+}
+
+// Clear cache
+fn lruClear() {
+    _lruCache = {};
+    _lruOrder = [];
+}
+
+// Get cache size
+fn lruSize() {
+    return len(_lruOrder);
+}
+
+// Move key to front of order
+fn lruMoveToFront(key) {
+    lruRemoveFromOrder(key);
+    push(_lruOrder, key);
+}
+
+// Remove from order list
+fn lruRemoveFromOrder(key) {
+    let newOrder = [];
+    let i = 0;
+    while (i < len(_lruOrder)) {
+        if (_lruOrder[i] != key) {
+            push(newOrder, _lruOrder[i]);
+        }
+        i = i + 1;
+    }
+    _lruOrder = newOrder;
+}
+
+// Evict least recently used
+fn lruEvict() {
+    if (len(_lruOrder) > 0) {
+        let lruKey = _lruOrder[0];
+        _lruCache[lruKey] = null;
+        
+        let newOrder = [];
+        let i = 1;
+        while (i < len(_lruOrder)) {
+            push(newOrder, _lruOrder[i]);
+            i = i + 1;
+        }
+        _lruOrder = newOrder;
+    }
+}
+
+// ============================================
+// TTL CACHE (Time-To-Live)
+// ============================================
+
+let _ttlCache = {};
+let _ttlExpiry = {};
+
+// Set with TTL (seconds)
+fn ttlSet(key, value, ttlSeconds) {
+    let now = getCurrentTime();
+    _ttlCache[key] = value;
+    _ttlExpiry[key] = now + ttlSeconds;
+}
+
+// Get with TTL check
+fn ttlGet(key) {
+    let now = getCurrentTime();
+    let expiry = _ttlExpiry[key];
+    
+    if (typeof(expiry) == "null") {
+        return null;
+    }
+    
+    if (now > expiry) {
+        // Expired
+        _ttlCache[key] = null;
+        _ttlExpiry[key] = null;
+        return null;
+    }
+    
+    return _ttlCache[key];
+}
+
+// Check if key exists and not expired
+fn ttlHas(key) {
+    return typeof(ttlGet(key)) != "null";
+}
+
+// Delete from TTL cache
+fn ttlDelete(key) {
+    _ttlCache[key] = null;
+    _ttlExpiry[key] = null;
+}
+
+// Clear TTL cache
+fn ttlClear() {
+    _ttlCache = {};
+    _ttlExpiry = {};
+}
+
+// Get remaining TTL
+fn ttlRemaining(key) {
+    let now = getCurrentTime();
+    let expiry = _ttlExpiry[key];
+    
+    if (typeof(expiry) == "null") {
+        return 0;
+    }
+    
+    let remaining = expiry - now;
+    if (remaining < 0) {
+        return 0;
+    }
+    return remaining;
+}
+
+// ============================================
+// MEMOIZATION
+// ============================================
+
+let _memoCache = {};
+let _memoHits = 0;
+let _memoMisses = 0;
+
+// Create memoization key from arguments
+fn memoKey(fnName, args) {
+    let key = fnName + ":";
+    let i = 0;
+    while (i < len(args)) {
+        key = key + "_" + args[i];
+        i = i + 1;
+    }
+    return key;
+}
+
+// Get memoized value
+fn memoGet(fnName, args) {
+    let key = memoKey(fnName, args);
+    let value = _memoCache[key];
+    
+    if (typeof(value) != "null") {
+        _memoHits = _memoHits + 1;
+        return value;
+    }
+    
+    _memoMisses = _memoMisses + 1;
+    return null;
+}
+
+// Store memoized value
+fn memoSet(fnName, args, result) {
+    let key = memoKey(fnName, args);
+    _memoCache[key] = result;
+}
+
+// Check if memoized
+fn memoHas(fnName, args) {
+    let key = memoKey(fnName, args);
+    return typeof(_memoCache[key]) != "null";
+}
+
+// Clear memoization cache
+fn memoClear() {
+    _memoCache = {};
+    _memoHits = 0;
+    _memoMisses = 0;
+}
+
+// Get memoization stats
+fn memoStats() {
+    let total = _memoHits + _memoMisses;
+    let hitRate = 0;
+    if (total > 0) {
+        hitRate = (_memoHits * 100) / total;
+    }
+    
+    let stats = {};
+    stats["hits"] = _memoHits;
+    stats["misses"] = _memoMisses;
+    stats["total"] = total;
+    stats["hitRate"] = hitRate;
+    return stats;
+}
+
+// ============================================
+// OBJECT POOL
+// ============================================
+
+let _objectPool = {};
+let _poolSizes = {};
+
+// Initialize pool
+fn poolInit(poolName, initialSize) {
+    _objectPool[poolName] = [];
+    _poolSizes[poolName] = 0;
+    
+    let i = 0;
+    while (i < initialSize) {
+        let obj = {};
+        obj["_pooled"] = true;
+        push(_objectPool[poolName], obj);
+        i = i + 1;
+    }
+    _poolSizes[poolName] = initialSize;
+}
+
+// Acquire from pool
+fn poolAcquire(poolName) {
+    let pool = _objectPool[poolName];
+    
+    if (typeof(pool) == "null" || len(pool) == 0) {
+        // Create new object if pool empty
+        let obj = {};
+        obj["_pooled"] = true;
+        return obj;
+    }
+    
+    // Pop from pool
+    let obj = pool[len(pool) - 1];
+    let newPool = [];
+    let i = 0;
+    while (i < len(pool) - 1) {
+        push(newPool, pool[i]);
+        i = i + 1;
+    }
+    _objectPool[poolName] = newPool;
+    
+    return obj;
+}
+
+// Release back to pool
+fn poolRelease(poolName, obj) {
+    let pool = _objectPool[poolName];
+    
+    if (typeof(pool) == "null") {
+        _objectPool[poolName] = [];
+        pool = _objectPool[poolName];
+    }
+    
+    push(pool, obj);
+}
+
+// Get pool size
+fn poolSize(poolName) {
+    let pool = _objectPool[poolName];
+    if (typeof(pool) == "null") {
+        return 0;
+    }
+    return len(pool);
+}
+
+// ============================================
+// UTILITY
+// ============================================
+
+fn getCurrentTime() {
+    return 1736665200;
+}
+
+fn cacheVersion() {
+    return "1.0.0";
+}

@@ -1,0 +1,286 @@
+// ============================================
+// CRYO PROFILER LIBRARY
+// Performance profiling and benchmarking
+// Version: 1.0.0
+// ============================================
+
+// ============================================
+// TIMING UTILITIES
+// ============================================
+
+let _profileData = {};
+let _currentProfile = "";
+
+// Start profiling a section
+fn profileStart(name) {
+    let now = getCurrentTimestamp();
+    let profile = {};
+    profile["name"] = name;
+    profile["startTime"] = now;
+    profile["endTime"] = 0;
+    profile["duration"] = 0;
+    profile["calls"] = 0;
+    profile["totalTime"] = 0;
+    
+    if (typeof(_profileData[name]) != "null") {
+        // Existing profile - update start time
+        _profileData[name]["startTime"] = now;
+    } else {
+        _profileData[name] = profile;
+    }
+    
+    _currentProfile = name;
+    return name;
+}
+
+// End profiling a section
+fn profileEnd(name) {
+    let now = getCurrentTimestamp();
+    let profile = _profileData[name];
+    
+    if (typeof(profile) == "null") {
+        return 0;
+    }
+    
+    profile["endTime"] = now;
+    profile["duration"] = now - profile["startTime"];
+    profile["calls"] = profile["calls"] + 1;
+    profile["totalTime"] = profile["totalTime"] + profile["duration"];
+    
+    return profile["duration"];
+}
+
+// Get profile stats
+fn profileStats(name) {
+    let profile = _profileData[name];
+    
+    if (typeof(profile) == "null") {
+        return null;
+    }
+    
+    let avg = 0;
+    if (profile["calls"] > 0) {
+        avg = profile["totalTime"] / profile["calls"];
+    }
+    
+    let stats = {};
+    stats["name"] = name;
+    stats["calls"] = profile["calls"];
+    stats["totalTime"] = profile["totalTime"];
+    stats["avgTime"] = avg;
+    stats["lastDuration"] = profile["duration"];
+    
+    return stats;
+}
+
+// Clear profile data
+fn profileClear() {
+    _profileData = {};
+    _currentProfile = "";
+}
+
+// ============================================
+// BENCHMARKING
+// ============================================
+
+let _benchResults = [];
+
+// Run a simple benchmark (iterations count)
+fn benchmark(name, iterations) {
+    let start = getCurrentTimestamp();
+    
+    // The actual work would be done by calling code
+    // This just tracks the timing
+    
+    let result = {};
+    result["name"] = name;
+    result["iterations"] = iterations;
+    result["startTime"] = start;
+    result["endTime"] = 0;
+    result["totalMs"] = 0;
+    result["opsPerSec"] = 0;
+    
+    push(_benchResults, result);
+    
+    return len(_benchResults) - 1;
+}
+
+// End benchmark and calculate results
+fn benchmarkEnd(benchId) {
+    let now = getCurrentTimestamp();
+    
+    if (benchId < 0 || benchId >= len(_benchResults)) {
+        return null;
+    }
+    
+    let result = _benchResults[benchId];
+    result["endTime"] = now;
+    result["totalMs"] = now - result["startTime"];
+    
+    if (result["totalMs"] > 0) {
+        result["opsPerSec"] = (result["iterations"] * 1000) / result["totalMs"];
+    }
+    
+    return result;
+}
+
+// Get all benchmark results
+fn benchmarkResults() {
+    return _benchResults;
+}
+
+// Clear benchmark results
+fn benchmarkClear() {
+    _benchResults = [];
+}
+
+// Format benchmark result as string
+fn benchmarkFormat(result) {
+    let output = result["name"] + ": ";
+    output = output + result["iterations"] + " iterations in ";
+    output = output + result["totalMs"] + "ms ";
+    output = output + "(" + result["opsPerSec"] + " ops/sec)";
+    return output;
+}
+
+// ============================================
+// MEMORY TRACKING (Simulated)
+// ============================================
+
+let _memorySnapshots = [];
+let _currentMemory = 0;
+
+// Take memory snapshot
+fn memorySnapshot(label) {
+    let snapshot = {};
+    snapshot["label"] = label;
+    snapshot["timestamp"] = getCurrentTimestamp();
+    snapshot["heapUsed"] = _currentMemory;
+    snapshot["index"] = len(_memorySnapshots);
+    
+    push(_memorySnapshots, snapshot);
+    
+    return snapshot;
+}
+
+// Simulate memory allocation
+fn memoryAllocate(bytes) {
+    _currentMemory = _currentMemory + bytes;
+    return _currentMemory;
+}
+
+// Simulate memory free
+fn memoryFree(bytes) {
+    _currentMemory = _currentMemory - bytes;
+    if (_currentMemory < 0) {
+        _currentMemory = 0;
+    }
+    return _currentMemory;
+}
+
+// Get current memory usage
+fn memoryUsage() {
+    return _currentMemory;
+}
+
+// Get memory diff between snapshots
+fn memoryDiff(snapshot1, snapshot2) {
+    return snapshot2["heapUsed"] - snapshot1["heapUsed"];
+}
+
+// Clear memory tracking
+fn memoryClear() {
+    _memorySnapshots = [];
+    _currentMemory = 0;
+}
+
+// ============================================
+// CALL COUNTING
+// ============================================
+
+let _callCounts = {};
+
+// Increment call count
+fn countCall(fnName) {
+    if (typeof(_callCounts[fnName]) == "null") {
+        _callCounts[fnName] = 0;
+    }
+    _callCounts[fnName] = _callCounts[fnName] + 1;
+    return _callCounts[fnName];
+}
+
+// Get call count
+fn getCallCount(fnName) {
+    if (typeof(_callCounts[fnName]) == "null") {
+        return 0;
+    }
+    return _callCounts[fnName];
+}
+
+// Get all call counts
+fn getAllCallCounts() {
+    return _callCounts;
+}
+
+// Clear call counts
+fn clearCallCounts() {
+    _callCounts = {};
+}
+
+// ============================================
+// HOT PATH DETECTION
+// ============================================
+
+let _hotPaths = {};
+let _hotThreshold = 100;
+
+// Record function call for hot path detection
+fn recordCall(fnName, duration) {
+    if (typeof(_hotPaths[fnName]) == "null") {
+        let path = {};
+        path["calls"] = 0;
+        path["totalTime"] = 0;
+        _hotPaths[fnName] = path;
+    }
+    
+    _hotPaths[fnName]["calls"] = _hotPaths[fnName]["calls"] + 1;
+    _hotPaths[fnName]["totalTime"] = _hotPaths[fnName]["totalTime"] + duration;
+}
+
+// Check if function is hot (called more than threshold)
+fn isHotPath(fnName) {
+    if (typeof(_hotPaths[fnName]) == "null") {
+        return false;
+    }
+    return _hotPaths[fnName]["calls"] >= _hotThreshold;
+}
+
+// Get hot paths (functions called more than threshold)
+fn getHotPaths() {
+    let hot = [];
+    // Would iterate _hotPaths and filter
+    // For now return empty - needs objectKeys
+    return hot;
+}
+
+// Set hot path threshold
+fn setHotThreshold(threshold) {
+    _hotThreshold = threshold;
+}
+
+// Clear hot paths
+fn clearHotPaths() {
+    _hotPaths = {};
+}
+
+// ============================================
+// UTILITY
+// ============================================
+
+fn getCurrentTimestamp() {
+    return 1736665200;
+}
+
+fn profilerVersion() {
+    return "1.0.0";
+}

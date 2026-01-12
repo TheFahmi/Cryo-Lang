@@ -1,0 +1,199 @@
+// Test Cache Library
+import "cache"
+
+fn main() {
+    print("========================================");
+    print("   CRYO CACHE LIBRARY TEST");
+    print("========================================");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // ==========================================
+    // LRU CACHE TESTS
+    // ==========================================
+    
+    // Test 1: LRU Init and Set
+    print("");
+    print("[TEST 1] LRU Cache Init/Set");
+    lruInit(5);
+    lruSet("a", 1);
+    lruSet("b", 2);
+    lruSet("c", 3);
+    
+    if (lruSize() == 3) {
+        print("  ✓ PASS: LRU size = " + lruSize());
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Expected size 3");
+        failed = failed + 1;
+    }
+    
+    // Test 2: LRU Get
+    print("");
+    print("[TEST 2] LRU Cache Get");
+    let val = lruGet("b");
+    
+    if (val == 2) {
+        print("  ✓ PASS: Got value = " + val);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Expected 2");
+        failed = failed + 1;
+    }
+    
+    // Test 3: LRU Eviction
+    print("");
+    print("[TEST 3] LRU Eviction");
+    lruInit(3);
+    lruSet("x", 10);
+    lruSet("y", 20);
+    lruSet("z", 30);
+    lruSet("w", 40); // Should evict "x"
+    
+    let hasX = lruHas("x");
+    let hasW = lruHas("w");
+    
+    if (hasX == false && hasW == true) {
+        print("  ✓ PASS: LRU eviction works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Eviction broken");
+        failed = failed + 1;
+    }
+    
+    // Test 4: LRU Delete
+    print("");
+    print("[TEST 4] LRU Delete");
+    lruDelete("y");
+    
+    if (lruHas("y") == false && lruSize() == 2) {
+        print("  ✓ PASS: Delete works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Delete broken");
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // TTL CACHE TESTS
+    // ==========================================
+    
+    // Test 5: TTL Set/Get
+    print("");
+    print("[TEST 5] TTL Cache Set/Get");
+    ttlClear();
+    ttlSet("session", "abc123", 3600);
+    
+    let session = ttlGet("session");
+    if (session == "abc123") {
+        print("  ✓ PASS: TTL get works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: TTL get failed");
+        failed = failed + 1;
+    }
+    
+    // Test 6: TTL Remaining
+    print("");
+    print("[TEST 6] TTL Remaining");
+    let remaining = ttlRemaining("session");
+    
+    if (remaining > 0) {
+        print("  ✓ PASS: TTL remaining = " + remaining);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: TTL remaining wrong");
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // MEMOIZATION TESTS
+    // ==========================================
+    
+    // Test 7: Memoization Set/Get
+    print("");
+    print("[TEST 7] Memoization");
+    memoClear();
+    
+    let args = [5, 10];
+    memoSet("add", args, 15);
+    
+    let cached = memoGet("add", args);
+    if (cached == 15) {
+        print("  ✓ PASS: Memoization works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Memoization broken");
+        failed = failed + 1;
+    }
+    
+    // Test 8: Memo Stats
+    print("");
+    print("[TEST 8] Memo Stats");
+    memoGet("add", args); // Hit
+    memoGet("add", args); // Hit
+    memoGet("sub", [1, 2]); // Miss
+    
+    let stats = memoStats();
+    if (stats["hits"] == 3 && stats["misses"] == 1) {
+        print("  ✓ PASS: Stats correct (hits=" + stats["hits"] + ", misses=" + stats["misses"] + ")");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Stats wrong");
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // OBJECT POOL TESTS
+    // ==========================================
+    
+    // Test 9: Pool Init
+    print("");
+    print("[TEST 9] Object Pool Init");
+    poolInit("connections", 5);
+    
+    if (poolSize("connections") == 5) {
+        print("  ✓ PASS: Pool initialized with 5 objects");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Pool size wrong");
+        failed = failed + 1;
+    }
+    
+    // Test 10: Pool Acquire/Release
+    print("");
+    print("[TEST 10] Pool Acquire/Release");
+    let obj1 = poolAcquire("connections");
+    let obj2 = poolAcquire("connections");
+    let sizeAfterAcquire = poolSize("connections");
+    
+    poolRelease("connections", obj1);
+    let sizeAfterRelease = poolSize("connections");
+    
+    if (sizeAfterAcquire == 3 && sizeAfterRelease == 4) {
+        print("  ✓ PASS: Acquire/Release works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Pool operations broken");
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+    }
+    
+    return 0;
+}

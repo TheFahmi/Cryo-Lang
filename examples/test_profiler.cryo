@@ -1,0 +1,211 @@
+// Test Profiler Library
+import "profiler"
+
+fn main() {
+    print("========================================");
+    print("   CRYO PROFILER LIBRARY TEST");
+    print("========================================");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // ==========================================
+    // PROFILING TESTS
+    // ==========================================
+    
+    // Test 1: Profile Start/End
+    print("");
+    print("[TEST 1] Profile Start/End");
+    profileClear();
+    profileStart("testSection");
+    let duration = profileEnd("testSection");
+    
+    if (duration >= 0) {
+        print("  ✓ PASS: Profile recorded, duration=" + duration);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Profile failed");
+        failed = failed + 1;
+    }
+    
+    // Test 2: Profile Stats
+    print("");
+    print("[TEST 2] Profile Stats");
+    profileStart("statsTest");
+    profileEnd("statsTest");
+    profileStart("statsTest");
+    profileEnd("statsTest");
+    
+    let stats = profileStats("statsTest");
+    if (stats != null && stats["calls"] == 2) {
+        print("  ✓ PASS: Stats show " + stats["calls"] + " calls");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Stats incorrect");
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // BENCHMARK TESTS
+    // ==========================================
+    
+    // Test 3: Benchmark
+    print("");
+    print("[TEST 3] Benchmark");
+    benchmarkClear();
+    let benchId = benchmark("loopTest", 1000);
+    let result = benchmarkEnd(benchId);
+    
+    if (result != null && result["iterations"] == 1000) {
+        print("  ✓ PASS: Benchmark recorded " + result["iterations"] + " iterations");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Benchmark broken");
+        failed = failed + 1;
+    }
+    
+    // Test 4: Benchmark Format
+    print("");
+    print("[TEST 4] Benchmark Format");
+    let formatted = benchmarkFormat(result);
+    
+    if (len(formatted) > 0) {
+        print("  ✓ PASS: " + formatted);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Format failed");
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // MEMORY TRACKING TESTS
+    // ==========================================
+    
+    // Test 5: Memory Snapshot
+    print("");
+    print("[TEST 5] Memory Snapshot");
+    memoryClear();
+    let snap1 = memorySnapshot("before");
+    
+    if (snap1["label"] == "before") {
+        print("  ✓ PASS: Snapshot taken");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Snapshot failed");
+        failed = failed + 1;
+    }
+    
+    // Test 6: Memory Allocate/Free
+    print("");
+    print("[TEST 6] Memory Allocate/Free");
+    memoryAllocate(1024);
+    memoryAllocate(2048);
+    let used = memoryUsage();
+    memoryFree(512);
+    let after = memoryUsage();
+    
+    if (used == 3072 && after == 2560) {
+        print("  ✓ PASS: Memory tracking works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Memory values wrong");
+        failed = failed + 1;
+    }
+    
+    // Test 7: Memory Diff
+    print("");
+    print("[TEST 7] Memory Diff");
+    memoryClear();
+    let before = memorySnapshot("start");
+    memoryAllocate(5000);
+    let afterSnap = memorySnapshot("end");
+    let diff = memoryDiff(before, afterSnap);
+    
+    if (diff == 5000) {
+        print("  ✓ PASS: Memory diff = " + diff);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Expected 5000, got " + diff);
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // CALL COUNTING TESTS
+    // ==========================================
+    
+    // Test 8: Call Counting
+    print("");
+    print("[TEST 8] Call Counting");
+    clearCallCounts();
+    countCall("myFunction");
+    countCall("myFunction");
+    countCall("myFunction");
+    countCall("otherFunction");
+    
+    let myCount = getCallCount("myFunction");
+    let otherCount = getCallCount("otherFunction");
+    
+    if (myCount == 3 && otherCount == 1) {
+        print("  ✓ PASS: Call counts correct");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Counts wrong");
+        failed = failed + 1;
+    }
+    
+    // ==========================================
+    // HOT PATH TESTS
+    // ==========================================
+    
+    // Test 9: Hot Path Recording
+    print("");
+    print("[TEST 9] Hot Path Recording");
+    clearHotPaths();
+    setHotThreshold(5);
+    
+    let i = 0;
+    while (i < 10) {
+        recordCall("frequentFn", 10);
+        i = i + 1;
+    }
+    
+    if (isHotPath("frequentFn") == true) {
+        print("  ✓ PASS: Hot path detected");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Should be hot path");
+        failed = failed + 1;
+    }
+    
+    // Test 10: Not Hot Path
+    print("");
+    print("[TEST 10] Not Hot Check");
+    recordCall("rareFn", 5);
+    recordCall("rareFn", 5);
+    
+    if (isHotPath("rareFn") == false) {
+        print("  ✓ PASS: Correctly not a hot path");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Should not be hot");
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+    }
+    
+    return 0;
+}
