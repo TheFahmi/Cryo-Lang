@@ -183,8 +183,8 @@ Building the package ecosystem.
 - [x] Package listing & search UI
 - [x] Package detail pages
 - [x] API endpoints (`/api/packages`, `/api/search`, `/api/index.json`)
-- [ ] Package publishing workflow (`apm publish`)
-- [ ] Version management & semver
+- [x] Package publishing workflow (`apm publish`) ✅
+- [x] Version management & semver (`apm bump`) ✅
 - [ ] Dependency resolution algorithm
 - [ ] Private package support
 - [ ] Package statistics & downloads tracking

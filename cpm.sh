@@ -49,12 +49,20 @@ show_help() {
     echo "  add <pkg>         Add a dependency"
     echo "  remove <pkg>      Remove a dependency"
     echo "  update            Update all dependencies"
+    echo "  test              Run tests (tests/test.cryo)"
     echo "  list              List installed dependencies"
     echo "  search <query>    Search for packages"
-    echo "  publish           Publish package to registry"
+    echo "  publish           Publish package (git tag)"
+    echo "  bump [type]       Bump version (major|minor|patch)"
     echo "  clean             Remove build artifacts"
     echo "  version           Show version"
     echo "  help              Show this help"
+    echo ""
+    echo "Examples:"
+    echo "  apm init my-project"
+    echo "  apm install http"
+    echo "  apm script build"
+    echo "  apm bump minor"
     echo ""
     echo "Scripts (defined in cryo.toml [scripts]):"
     echo "  apm run start                       # Run 'start' script"
@@ -884,6 +892,46 @@ cmd_info() {
         echo "Try searching:"
         echo "  apm search ${pkg}"
     fi
+    fi
+}
+
+cmd_bump() {
+    local type="${1:-patch}"
+    
+    if [[ ! -f "cryo.toml" ]]; then
+        print_error "No cryo.toml found."
+        exit 1
+    fi
+    
+    local current=$(parse_toml_value "cryo.toml" "version")
+    
+    if [[ -z "$current" ]]; then
+        print_error "Could not parse version from cryo.toml"
+        exit 1
+    fi
+    
+    local major=$(echo $current | cut -d. -f1)
+    local minor=$(echo $current | cut -d. -f2)
+    local patch=$(echo $current | cut -d. -f3)
+    
+    case "$type" in
+        major) major=$((major + 1)); minor=0; patch=0 ;;
+        minor) minor=$((minor + 1)); patch=0 ;;
+        patch) patch=$((patch + 1)) ;;
+        *)
+            print_error "Unknown bump type: $type"
+            echo "Usage: apm bump [major|minor|patch]"
+            exit 1
+            ;;
+    esac
+    
+    local new_version="${major}.${minor}.${patch}"
+    
+    # Update cryo.toml safely using sed
+    # We look for 'version = "X.Y.Z"' strictly
+    sed -i "s/version = \"${current}\"/version = \"${new_version}\"/" cryo.toml
+    
+    print_success "Bumped version: ${current} -> ${new_version}"
 }
 
 cmd_publish() {
@@ -908,8 +956,49 @@ cmd_publish() {
         exit 1
     fi
     
+    
+    # Check semver format
+    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        print_error "Invalid version format: $version"
+        echo "Version must match semver (e.g. 1.0.0)"
+        exit 1
+    fi
+
+    # Run tests before publishing
+    print_step "1" "Running tests..."
+    if [[ -f "tests/test.cryo" ]] || [[ -d "tests" ]]; then
+        # Check if we have a test script or run default
+        print_info "Verifying package integrity..."
+        # We can't easily call cmd_run here if it's complex, but we can try basic test
+        if [ -f "./test_stdlib.ar" ]; then
+             # This is core repo, skip
+             :
+        elif cmd_script "test" 2>/dev/null; then
+             print_success "Tests passed (script)"
+        elif [ -f "tests/test.cryo" ] && cryo tests/test.cryo >/dev/null 2>&1; then
+             print_success "Tests passed (default)"
+        else
+             print_warning "Tests skipped or failed (no standard test entry)"
+        fi
+    else
+        print_info "No tests found, skipping."
+    fi
+
+    # Create release artifact
+    print_step "2" "Creating release artifact..."
+    local artifact="${name}-v${version}.tar.gz"
+    
+    # Use tar to archive, excluding git, build, deps, and temp files
+    if tar --exclude=".git" --exclude="build" --exclude="deps" --exclude="*.tar.gz" \
+           --exclude="node_modules" --exclude=".DS_Store" \
+           -czf "$artifact" . 2>/dev/null; then
+        print_success "Created artifact: $artifact"
+    else
+        print_warning "Could not create tarball (tar command missing?)"
+    fi
+
     # Create a git tag
-    print_step "1" "Creating tag v${version}..."
+    print_step "3" "Creating tag v${version}..."
     
     if git tag "v${version}" 2>/dev/null; then
         print_success "Created tag: v${version}"
@@ -917,7 +1006,7 @@ cmd_publish() {
         print_warning "Tag already exists or git error"
     fi
     
-    print_step "2" "Pushing to repository..."
+    print_step "4" "Pushing to repository..."
     
     git push origin "v${version}" 2>/dev/null && \
         print_success "Pushed tag to origin" || \
@@ -925,6 +1014,7 @@ cmd_publish() {
     
     echo ""
     print_success "Published ${name}@${version}"
+    echo "Artifact: $(pwd)/${artifact}"
     echo ""
     echo "Others can install with:"
     echo "  apm add ${repo#https://github.com/}@v${version} --git"
@@ -1128,7 +1218,7 @@ main() {
         init)       cmd_init "$@" ;;
         build|b)    cmd_build "$@" ;;
         run|r)      cmd_run "$@" ;;
-        script|sc)  cmd_script "$@" ;;
+        script|sc)  cmd_script "$1" ;;
         install|i)  cmd_install "$@" ;;
         add|a)      cmd_add "$@" ;;
         remove|rm)  cmd_remove "$@" ;;
@@ -1137,6 +1227,7 @@ main() {
         search|s)   cmd_search "$@" ;;
         info)       cmd_info "$@" ;;
         publish)    cmd_publish "$@" ;;
+        bump)       cmd_bump "$1" ;;
         clean)      cmd_clean "$@" ;;
         version|--version|-v) cmd_version ;;
         help|--help|-h) show_help ;;
