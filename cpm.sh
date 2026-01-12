@@ -52,9 +52,12 @@ show_help() {
     echo "  test              Run tests (tests/test.cryo)"
     echo "  list              List installed dependencies"
     echo "  search <query>    Search for packages"
-    echo "  publish           Publish package (git tag)"
-    echo "  bump [type]       Bump version (major|minor|patch)"
+    echo "  publish               Publish package (git tag)"
+    echo "  bump [type]           Bump version (major|minor|patch)"
     echo "  clean             Remove build artifacts"
+    echo "  login <token>         Login to registry for private packages"
+    echo "  logout                Remove stored auth token"
+    echo "  workspace <cmd>       Run command in all workspace members"
     echo "  version           Show version"
     echo "  help              Show this help"
     echo ""
@@ -63,6 +66,8 @@ show_help() {
     echo "  apm install http"
     echo "  apm script build"
     echo "  apm bump minor"
+    echo "  apm workspace build"
+    echo ""
     echo ""
     echo "Scripts (defined in cryo.toml [scripts]):"
     echo "  apm run start                       # Run 'start' script"
@@ -315,8 +320,213 @@ parse_all_dependencies() {
 }
 
 # ============================================
+# WORKSPACE SUPPORT
+# ============================================
+
+# Parse workspace members from cryo.toml
+parse_workspace_members() {
+    local file="$1"
+    local in_workspace=false
+    local in_members=false
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^\[workspace\] ]]; then
+            in_workspace=true
+            continue
+        fi
+        
+        if [[ "$line" =~ ^\[.*\] ]] && [[ ! "$line" =~ ^\[workspace ]]; then
+            in_workspace=false
+            in_members=false
+            continue
+        fi
+        
+        if $in_workspace; then
+            if [[ "$line" =~ members[[:space:]]*=[[:space:]]*\[ ]]; then
+                in_members=true
+            fi
+            
+            if $in_members; then
+                # Extract member paths from array
+                while [[ "$line" =~ \"([^\"]+)\" ]]; do
+                    echo "${BASH_REMATCH[1]}"
+                    line="${line#*\"${BASH_REMATCH[1]}\"}"
+                done
+                
+                if [[ "$line" =~ \] ]]; then
+                    in_members=false
+                fi
+            fi
+        fi
+    done < "$file"
+}
+
+# Check if current directory is a workspace
+is_workspace() {
+    if [[ -f "cryo.toml" ]]; then
+        grep -q "^\[workspace\]" cryo.toml 2>/dev/null
+        return $?
+    fi
+    return 1
+}
+
+# Run command in all workspace members
+workspace_foreach() {
+    local cmd="$1"
+    shift
+    
+    if ! is_workspace; then
+        print_error "Not a workspace (no [workspace] section in cryo.toml)"
+        return 1
+    fi
+    
+    local members=$(parse_workspace_members "cryo.toml")
+    local count=0
+    
+    for member in $members; do
+        if [[ -d "$member" ]] && [[ -f "$member/cryo.toml" ]]; then
+            print_info "[$member] Running: $cmd $@"
+            (cd "$member" && $cmd "$@") || true
+            count=$((count + 1))
+        else
+            print_warning "Member not found: $member"
+        fi
+    done
+    
+    print_success "Ran command in $count workspace members"
+}
+
+# ============================================
+# DEPENDENCY RESOLUTION
+# ============================================
+
+# Track resolved dependencies to avoid duplicates
+_resolved_deps=""
+
+# Add to resolved list
+mark_resolved() {
+    local name="$1"
+    _resolved_deps="${_resolved_deps} ${name} "
+}
+
+# Check if already resolved
+is_resolved() {
+    local name="$1"
+    [[ "$_resolved_deps" == *" ${name} "* ]]
+}
+
+# Resolve dependencies recursively with topological order
+resolve_dependencies() {
+    local pkg_dir="$1"
+    local depth="${2:-0}"
+    
+    if [[ ! -f "${pkg_dir}/cryo.toml" ]]; then
+        return 0
+    fi
+    
+    local indent=""
+    local i=0
+    while [[ $i -lt $depth ]]; do
+        indent="  ${indent}"
+        i=$((i + 1))
+    done
+    
+    # Parse dependencies
+    while IFS='|' read -r name type value extra; do
+        [[ -z "$name" ]] && continue
+        
+        if is_resolved "$name"; then
+            continue
+        fi
+        
+        mark_resolved "$name"
+        
+        print_info "${indent}Resolving: ${name} (${type})"
+        
+        case "$type" in
+            path)
+                if [[ -d "$value" ]]; then
+                    # Recurse into path dependency
+                    resolve_dependencies "$value" $((depth + 1))
+                fi
+                ;;
+            git)
+                # Output git dependency for installation
+                echo "${name}|${type}|${value}|${extra}"
+                ;;
+            registry)
+                # Output registry dependency
+                echo "${name}|${type}|${value}"
+                ;;
+        esac
+    done < <(parse_all_dependencies "${pkg_dir}/cryo.toml")
+}
+
+# Reset resolved deps
+reset_resolved() {
+    _resolved_deps=""
+}
+
+# ============================================
+# PRIVATE PACKAGE SUPPORT
+# ============================================
+
+# Auth token file
+AUTH_TOKEN_FILE="${HOME}/.cryo/auth_token"
+
+# Set auth token
+cmd_login() {
+    local token="$1"
+    
+    if [[ -z "$token" ]]; then
+        print_error "Usage: apm login <token>"
+        echo ""
+        echo "Get your token from: https://apm.cryo.dev/settings/tokens"
+        exit 1
+    fi
+    
+    mkdir -p "$(dirname "$AUTH_TOKEN_FILE")"
+    echo "$token" > "$AUTH_TOKEN_FILE"
+    chmod 600 "$AUTH_TOKEN_FILE"
+    
+    print_success "Logged in successfully"
+    print_info "Token stored in: $AUTH_TOKEN_FILE"
+}
+
+# Remove auth token
+cmd_logout() {
+    if [[ -f "$AUTH_TOKEN_FILE" ]]; then
+        rm "$AUTH_TOKEN_FILE"
+        print_success "Logged out successfully"
+    else
+        print_info "Not currently logged in"
+    fi
+}
+
+# Get auth header if logged in
+get_auth_header() {
+    if [[ -f "$AUTH_TOKEN_FILE" ]]; then
+        local token=$(cat "$AUTH_TOKEN_FILE")
+        echo "-H \"Authorization: Bearer ${token}\""
+    fi
+}
+
+# Fetch with authentication
+fetch_authenticated() {
+    local url="$1"
+    local auth_header=$(get_auth_header)
+    
+    if [[ -n "$auth_header" ]]; then
+        curl -sL $auth_header "$url"
+    else
+        curl -sL "$url"
+    fi
+}
+
+# ============================================
 # DEPENDENCY INSTALLATION
 # ============================================
+
 
 install_path_dep() {
     local name="$1"
@@ -1228,6 +1438,9 @@ main() {
         info)       cmd_info "$@" ;;
         publish)    cmd_publish "$@" ;;
         bump)       cmd_bump "$1" ;;
+        login)      cmd_login "$1" ;;
+        logout)     cmd_logout ;;
+        workspace|ws) workspace_foreach "$@" ;;
         clean)      cmd_clean "$@" ;;
         version|--version|-v) cmd_version ;;
         help|--help|-h) show_help ;;

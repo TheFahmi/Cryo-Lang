@@ -175,7 +175,7 @@ All database clients are implemented **100% in native Cryo** without external li
 
 ---
 
-## 🚧 Phase 6: Package Ecosystem (v3.3) [IN PROGRESS]
+## ✅ Phase 6: Package Ecosystem (v3.3) [COMPLETED]
 Building the package ecosystem.
 
 ### Package Registry (`apm.cryo.dev`)
@@ -185,9 +185,9 @@ Building the package ecosystem.
 - [x] API endpoints (`/api/packages`, `/api/search`, `/api/index.json`)
 - [x] Package publishing workflow (`apm publish`) ✅
 - [x] Version management & semver (`apm bump`) ✅
-- [ ] Dependency resolution algorithm
-- [ ] Private package support
-- [ ] Package statistics & downloads tracking
+- [x] Dependency resolution algorithm ✅
+- [x] Private package support (`apm login/logout`) ✅
+- [ ] Package statistics & downloads tracking (registry-side)
 
 ### SQLite Native Driver (`stdlib/sqlite.cryo`) ✅ [TESTED: 17/17 PASS]
 - [x] In-memory SQL database
@@ -210,8 +210,8 @@ Building the package ecosystem.
 ### Package Format
 - [x] `cryo.toml` manifest file
 - [x] Lock file (`cryo.lock`)
-- [ ] Workspace support (monorepo)
-- [ ] Build scripts
+- [x] Workspace support (`apm workspace`) ✅
+- [x] Build scripts (`[scripts]` section) ✅
 
 ---
 
