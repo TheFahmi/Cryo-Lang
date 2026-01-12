@@ -232,11 +232,27 @@ Maximizing runtime performance.
 - [x] Debounce & throttle
 - [x] Queue operations
 - [x] Cancellation tokens
-- [ ] Non-blocking socket I/O (native)
-- [ ] Event loop (`libuv` style)
 
-### Optimizations
-- [ ] SIMD operations
+### Event Loop (`stdlib/event_loop.cryo`) ✅ [TESTED: 10/10 PASS]
+- [x] setTimeout/setInterval simulation
+- [x] setImmediate and nextTick
+- [x] Event queue with emit
+- [x] Tick-based execution
+- [x] Timer management (clear)
+- [x] Run to completion
+
+### SIMD Operations (`stdlib/simd.cryo`) ✅ [TESTED: 10/10 PASS]
+- [x] Vector math (add, sub, mul, div, scale)
+- [x] Reductions (sum, product, min, max, mean, dot)
+- [x] Comparisons (eq, gt, lt)
+- [x] Generation (zeros, ones, fill, range)
+- [x] Transforms (abs, clamp, normalize, reverse)
+- [x] Filter operations
+- [x] Matrix multiply and transpose
+
+### Native Optimizations (Planned)
+- [ ] Non-blocking socket I/O (native)
+- [ ] libuv-style event loop (native)
 - [ ] Inline caching
 - [ ] Escape analysis
 - [ ] Dead code elimination

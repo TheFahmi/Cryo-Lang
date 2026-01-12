@@ -1,0 +1,170 @@
+// Test SIMD Library
+import "simd"
+
+fn main() {
+    print("========================================");
+    print("   CRYO SIMD LIBRARY TEST");
+    print("========================================");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Vector Addition
+    print("");
+    print("[TEST 1] Vector Addition");
+    let a = [1, 2, 3, 4, 5];
+    let b = [10, 20, 30, 40, 50];
+    let result = vecAdd(a, b);
+    
+    if (result[0] == 11 && result[4] == 55 && len(result) == 5) {
+        print("  ✓ PASS: vecAdd works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: vecAdd incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 2: Vector Multiplication
+    print("");
+    print("[TEST 2] Vector Multiplication");
+    let mul = vecMul([2, 3, 4], [5, 6, 7]);
+    
+    if (mul[0] == 10 && mul[1] == 18 && mul[2] == 28) {
+        print("  ✓ PASS: vecMul works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: vecMul incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 3: Vector Sum
+    print("");
+    print("[TEST 3] Vector Sum");
+    let sum = vecSum([1, 2, 3, 4, 5]);
+    
+    if (sum == 15) {
+        print("  ✓ PASS: vecSum = " + sum);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Expected 15, got " + sum);
+        failed = failed + 1;
+    }
+    
+    // Test 4: Min/Max
+    print("");
+    print("[TEST 4] Min/Max");
+    let arr = [5, 2, 8, 1, 9, 3];
+    let minV = vecMin(arr);
+    let maxV = vecMax(arr);
+    
+    if (minV == 1 && maxV == 9) {
+        print("  ✓ PASS: min=" + minV + ", max=" + maxV);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: min/max incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 5: Dot Product
+    print("");
+    print("[TEST 5] Dot Product");
+    let dot = vecDot([1, 2, 3], [4, 5, 6]);
+    
+    if (dot == 32) {
+        print("  ✓ PASS: dot product = " + dot);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Expected 32, got " + dot);
+        failed = failed + 1;
+    }
+    
+    // Test 6: Range Generation
+    print("");
+    print("[TEST 6] Range Generation");
+    let range = vecRange(0, 5);
+    
+    if (len(range) == 5 && range[0] == 0 && range[4] == 4) {
+        print("  ✓ PASS: vecRange works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Range generation broken");
+        failed = failed + 1;
+    }
+    
+    // Test 7: Clamp
+    print("");
+    print("[TEST 7] Clamp Values");
+    let clamped = vecClamp([1, 5, 10, 15, 20], 5, 15);
+    
+    if (clamped[0] == 5 && clamped[2] == 10 && clamped[4] == 15) {
+        print("  ✓ PASS: vecClamp works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Clamp incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 8: Filter by Mask
+    print("");
+    print("[TEST 8] Filter by Mask");
+    let data = [10, 20, 30, 40, 50];
+    let mask = [1, 0, 1, 0, 1];
+    let filtered = vecFilter(data, mask);
+    
+    if (len(filtered) == 3 && filtered[0] == 10 && filtered[2] == 50) {
+        print("  ✓ PASS: Filter works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Filter incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 9: Scale
+    print("");
+    print("[TEST 9] Scale Vector");
+    let scaled = vecScale([1, 2, 3], 10);
+    
+    if (scaled[0] == 10 && scaled[1] == 20 && scaled[2] == 30) {
+        print("  ✓ PASS: vecScale works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Scale incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 10: Matrix Multiply
+    print("");
+    print("[TEST 10] Matrix Multiply (2x2)");
+    // [1 2]   [5 6]   [19 22]
+    // [3 4] × [7 8] = [43 50]
+    let matA = [1, 2, 3, 4];
+    let matB = [5, 6, 7, 8];
+    let matC = matMul(matA, 2, 2, matB, 2, 2);
+    
+    if (matC[0] == 19 && matC[1] == 22 && matC[2] == 43 && matC[3] == 50) {
+        print("  ✓ PASS: Matrix multiply works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Matrix multiply incorrect");
+        print("  Got: " + matC[0] + ", " + matC[1] + ", " + matC[2] + ", " + matC[3]);
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+    }
+    
+    return 0;
+}
