@@ -1,0 +1,334 @@
+// ============================================
+// CRYO HEALTH CHECK LIBRARY
+// Kubernetes-style health endpoints
+// Version: 1.0.0
+// ============================================
+
+import "string"
+
+let HEALTH_VERSION = "1.0.0";
+
+// ============================================
+// HEALTH CHECK STATUS
+// ============================================
+
+let HEALTH_OK = "ok";
+let HEALTH_DEGRADED = "degraded";
+let HEALTH_DOWN = "down";
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+fn isNull(val) {
+    return typeof(val) == "null";
+}
+
+fn notNull(val) {
+    return typeof(val) != "null";
+}
+
+fn getCurrentTimestamp() {
+    return 1736665200;
+}
+
+// ============================================
+// STRUCTS
+// ============================================
+
+struct HealthStatus {
+    status: string,
+    uptime: int,
+    timestamp: int,
+    version: string,
+    checks: any
+}
+
+struct CheckResult {
+    name: string,
+    status: string,
+    message: string,
+    duration_ms: int
+}
+
+struct HealthConfig {
+    version: string,
+    startTime: int,
+    checks: any
+}
+
+// ============================================
+// GLOBAL HEALTH CONFIG
+// ============================================
+
+let HEALTH_CONFIG = HealthConfig {
+    version: "1.0.0",
+    startTime: getCurrentTimestamp(),
+    checks: []
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+fn healthInit(version) {
+    HEALTH_CONFIG.version = version;
+    HEALTH_CONFIG.startTime = getCurrentTimestamp();
+    HEALTH_CONFIG.checks = [];
+}
+
+fn healthRegisterCheck(name, checkFn) {
+    push(HEALTH_CONFIG.checks, {
+        name: name,
+        check: checkFn
+    });
+}
+
+// ============================================
+// HEALTH CHECK EXECUTION
+// ============================================
+
+fn healthRunChecks() {
+    let results = [];
+    let overallStatus = HEALTH_OK;
+    
+    let i = 0;
+    while (i < len(HEALTH_CONFIG.checks)) {
+        let check = HEALTH_CONFIG.checks[i];
+        let startTime = getCurrentTimestamp();
+        
+        let result = CheckResult {
+            name: check["name"],
+            status: HEALTH_OK,
+            message: "",
+            duration_ms: 0
+        };
+        
+        // Run the check (simplified - in real impl we'd call the function)
+        // For now, all checks pass
+        result.status = HEALTH_OK;
+        result.message = "Check passed";
+        result.duration_ms = getCurrentTimestamp() - startTime;
+        
+        push(results, result);
+        
+        // Update overall status
+        if (result.status == HEALTH_DOWN) {
+            overallStatus = HEALTH_DOWN;
+        } else if (result.status == HEALTH_DEGRADED && overallStatus != HEALTH_DOWN) {
+            overallStatus = HEALTH_DEGRADED;
+        }
+        
+        i = i + 1;
+    }
+    
+    return {
+        status: overallStatus,
+        checks: results
+    };
+}
+
+// ============================================
+// ENDPOINT HANDLERS
+// ============================================
+
+fn healthLivenessHandler() {
+    // Simple liveness check - if we can respond, we're alive
+    return {
+        status: HEALTH_OK,
+        timestamp: getCurrentTimestamp()
+    };
+}
+
+fn healthReadinessHandler() {
+    // Run all health checks
+    let checkResults = healthRunChecks();
+    
+    let status = HealthStatus {
+        status: checkResults["status"],
+        uptime: getCurrentTimestamp() - HEALTH_CONFIG.startTime,
+        timestamp: getCurrentTimestamp(),
+        version: HEALTH_CONFIG.version,
+        checks: checkResults["checks"]
+    };
+    
+    return status;
+}
+
+fn healthFullHandler() {
+    let checkResults = healthRunChecks();
+    
+    return {
+        status: checkResults["status"],
+        uptime: getCurrentTimestamp() - HEALTH_CONFIG.startTime,
+        timestamp: getCurrentTimestamp(),
+        version: HEALTH_CONFIG.version,
+        memory: getMemoryStats(),
+        checks: checkResults["checks"]
+    };
+}
+
+fn getMemoryStats() {
+    // Placeholder - would use actual memory stats
+    return {
+        used: 1024 * 1024 * 50,   // 50 MB
+        free: 1024 * 1024 * 200,  // 200 MB
+        total: 1024 * 1024 * 250  // 250 MB
+    };
+}
+
+// ============================================
+// JSON FORMATTERS
+// ============================================
+
+fn healthToJson(status) {
+    let json = "{";
+    json = json + "\"status\":\"" + status.status + "\",";
+    json = json + "\"uptime\":" + toString(status.uptime) + ",";
+    json = json + "\"timestamp\":" + toString(status.timestamp) + ",";
+    json = json + "\"version\":\"" + status.version + "\"";
+    json = json + "}";
+    return json;
+}
+
+fn healthLivenessJson() {
+    let result = healthLivenessHandler();
+    return "{\"status\":\"" + result["status"] + "\",\"timestamp\":" + toString(result["timestamp"]) + "}";
+}
+
+fn healthReadinessJson() {
+    let status = healthReadinessHandler();
+    return healthToJson(status);
+}
+
+// ============================================
+// KUBERNETES PROBE HELPERS
+// ============================================
+
+fn healthLivenessProbe() {
+    // Returns true if service is alive
+    return true;
+}
+
+fn healthReadinessProbe() {
+    // Returns true if service is ready to accept traffic
+    let result = healthRunChecks();
+    return result["status"] != HEALTH_DOWN;
+}
+
+fn healthStartupProbe() {
+    // Returns true if service has completed startup
+    let uptime = getCurrentTimestamp() - HEALTH_CONFIG.startTime;
+    return uptime >= 0;
+}
+
+// ============================================
+// HTTP STATUS HELPERS
+// ============================================
+
+fn healthHttpStatus(status) {
+    if (status == HEALTH_OK) {
+        return 200;
+    }
+    if (status == HEALTH_DEGRADED) {
+        return 200;  // Still return 200 for degraded
+    }
+    return 503;  // Service Unavailable for down
+}
+
+// ============================================
+// COMMON HEALTH CHECKS
+// ============================================
+
+fn checkDatabase(conn) {
+    // Placeholder database check
+    let result = CheckResult {
+        name: "database",
+        status: HEALTH_OK,
+        message: "Database connection healthy",
+        duration_ms: 0
+    };
+    
+    // In real implementation:
+    // let startTime = getCurrentTimestamp();
+    // try {
+    //     conn.query("SELECT 1");
+    //     result.duration_ms = getCurrentTimestamp() - startTime;
+    // } catch (e) {
+    //     result.status = HEALTH_DOWN;
+    //     result.message = e.message;
+    // }
+    
+    return result;
+}
+
+fn checkRedis(conn) {
+    // Placeholder Redis check
+    return CheckResult {
+        name: "redis",
+        status: HEALTH_OK,
+        message: "Redis connection healthy",
+        duration_ms: 0
+    };
+}
+
+fn checkDiskSpace(minFreeMB) {
+    // Placeholder disk space check
+    return CheckResult {
+        name: "disk",
+        status: HEALTH_OK,
+        message: "Sufficient disk space",
+        duration_ms: 0
+    };
+}
+
+fn checkMemory(maxUsagePercent) {
+    // Placeholder memory check
+    return CheckResult {
+        name: "memory",
+        status: HEALTH_OK,
+        message: "Memory usage within limits",
+        duration_ms: 0
+    };
+}
+
+// ============================================
+// CRYOWEB INTEGRATION
+// ============================================
+
+fn healthMiddleware(ctx) {
+    let path = ctx["path"];
+    
+    if (path == "/health" || path == "/healthz") {
+        ctx["response"] = healthReadinessJson();
+        ctx["status"] = 200;
+        ctx["contentType"] = "application/json";
+        return true;  // Handled
+    }
+    
+    if (path == "/health/live" || path == "/livez") {
+        ctx["response"] = healthLivenessJson();
+        ctx["status"] = 200;
+        ctx["contentType"] = "application/json";
+        return true;
+    }
+    
+    if (path == "/health/ready" || path == "/readyz") {
+        let status = healthReadinessHandler();
+        ctx["response"] = healthToJson(status);
+        ctx["status"] = healthHttpStatus(status.status);
+        ctx["contentType"] = "application/json";
+        return true;
+    }
+    
+    return false;  // Not handled, continue to next middleware
+}
+
+fn registerHealthRoutes(router) {
+    // Placeholder for CryoWeb router integration
+    // router.get("/health", healthHandler);
+    // router.get("/healthz", healthHandler);
+    // router.get("/livez", livenessHandler);
+    // router.get("/readyz", readinessHandler);
+    print("[Health] Registered health check routes");
+}

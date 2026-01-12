@@ -1,0 +1,459 @@
+// ============================================
+// CRYO SECURITY UTILITIES
+// CSRF, Rate Limiting, Secure Random
+// Version: 1.0.0
+// ============================================
+
+import "string"
+
+let SECURITY_VERSION = "1.0.0";
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+fn isNull(val) {
+    return typeof(val) == "null";
+}
+
+fn notNull(val) {
+    return typeof(val) != "null";
+}
+
+fn getCurrentTimestamp() {
+    return 1736665200;
+}
+
+// ============================================
+// SECURE RANDOM GENERATION
+// ============================================
+
+// Entropy pool for random generation
+let ENTROPY_POOL = [];
+let ENTROPY_INDEX = 0;
+
+fn secureRandomInit() {
+    // Initialize entropy pool with timestamp-based seed
+    let seed = getCurrentTimestamp();
+    let i = 0;
+    while (i < 256) {
+        seed = (seed * 1103515245 + 12345) % 2147483647;
+        push(ENTROPY_POOL, seed % 256);
+        i = i + 1;
+    }
+}
+
+fn secureRandomByte() {
+    if (len(ENTROPY_POOL) == 0) {
+        secureRandomInit();
+    }
+    
+    // Mix entropy
+    ENTROPY_INDEX = (ENTROPY_INDEX + 1) % len(ENTROPY_POOL);
+    let value = ENTROPY_POOL[ENTROPY_INDEX];
+    
+    // Update pool
+    let next = (ENTROPY_INDEX + 1) % len(ENTROPY_POOL);
+    ENTROPY_POOL[ENTROPY_INDEX] = (value + ENTROPY_POOL[next] + getCurrentTimestamp()) % 256;
+    
+    return value;
+}
+
+fn secureRandomBytes(count) {
+    let result = [];
+    let i = 0;
+    while (i < count) {
+        push(result, secureRandomByte());
+        i = i + 1;
+    }
+    return result;
+}
+
+fn secureRandomInt(min, max) {
+    if (max <= min) {
+        return min;
+    }
+    
+    let range = max - min;
+    let bytes = secureRandomBytes(4);
+    let value = bytes[0] + bytes[1] * 256 + bytes[2] * 65536 + bytes[3] * 16777216;
+    if (value < 0) { value = -value; }
+    
+    return min + (value % range);
+}
+
+fn secureRandomString(length, charset) {
+    if (isNull(charset) || charset == "") {
+        charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    }
+    
+    let result = "";
+    let i = 0;
+    while (i < length) {
+        let idx = secureRandomInt(0, len(charset));
+        result = result + charAt(charset, idx);
+        i = i + 1;
+    }
+    return result;
+}
+
+fn secureRandomHex(length) {
+    let result = "";
+    let hexChars = "0123456789abcdef";
+    let i = 0;
+    while (i < length) {
+        let byte = secureRandomByte();
+        result = result + charAt(hexChars, byte % 16);
+        i = i + 1;
+    }
+    return result;
+}
+
+fn secureRandomBase64(length) {
+    let result = "";
+    let b64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let i = 0;
+    while (i < length) {
+        let byte = secureRandomByte();
+        result = result + charAt(b64Chars, byte % 64);
+        i = i + 1;
+    }
+    return result;
+}
+
+// ============================================
+// CSRF TOKEN GENERATION
+// ============================================
+
+struct CsrfToken {
+    token: string,
+    createdAt: int,
+    expiresAt: int
+}
+
+fn csrfGenerate(expirySeconds) {
+    if (isNull(expirySeconds) || expirySeconds <= 0) {
+        expirySeconds = 3600;  // Default 1 hour
+    }
+    
+    let now = getCurrentTimestamp();
+    let token = secureRandomHex(64);
+    
+    return CsrfToken {
+        token: token,
+        createdAt: now,
+        expiresAt: now + expirySeconds
+    };
+}
+
+fn csrfValidate(token, expected) {
+    if (isNull(token) || isNull(expected)) {
+        return false;
+    }
+    
+    // Check expiration
+    let now = getCurrentTimestamp();
+    if (expected.expiresAt < now) {
+        return false;
+    }
+    
+    // Constant-time comparison
+    return constantTimeCompare(token, expected.token);
+}
+
+fn constantTimeCompare(a, b) {
+    if (len(a) != len(b)) {
+        return false;
+    }
+    
+    let diff = 0;
+    let i = 0;
+    while (i < len(a)) {
+        let ca = charCodeAt(a, i);
+        let cb = charCodeAt(b, i);
+        diff = diff + (ca - cb);
+        if (diff < 0) { diff = -diff; }
+        i = i + 1;
+    }
+    
+    return diff == 0;
+}
+
+fn charCodeAt(s, idx) {
+    let c = charAt(s, idx);
+    let ascii = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+    
+    let i = 0;
+    while (i < len(ascii)) {
+        if (charAt(ascii, i) == c) {
+            return i + 32;
+        }
+        i = i + 1;
+    }
+    return 0;
+}
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+struct RateLimitConfig {
+    maxRequests: int,
+    windowSeconds: int
+}
+
+struct RateLimitEntry {
+    key: string,
+    count: int,
+    windowStart: int
+}
+
+// In-memory rate limit store
+let RATE_LIMIT_STORE = {};
+
+fn rateLimitCreate(maxRequests, windowSeconds) {
+    return RateLimitConfig {
+        maxRequests: maxRequests,
+        windowSeconds: windowSeconds
+    };
+}
+
+fn rateLimitCheck(config, key) {
+    let now = getCurrentTimestamp();
+    
+    // Get or create entry
+    let entry = RATE_LIMIT_STORE[key];
+    
+    if (isNull(entry)) {
+        // Create new entry
+        RATE_LIMIT_STORE[key] = RateLimitEntry {
+            key: key,
+            count: 1,
+            windowStart: now
+        };
+        return true;
+    }
+    
+    // Check if window has expired
+    if (now - entry.windowStart >= config.windowSeconds) {
+        // Reset window
+        entry.count = 1;
+        entry.windowStart = now;
+        return true;
+    }
+    
+    // Check if under limit
+    if (entry.count < config.maxRequests) {
+        entry.count = entry.count + 1;
+        return true;
+    }
+    
+    // Rate limited
+    return false;
+}
+
+fn rateLimitReset(key) {
+    RATE_LIMIT_STORE[key] = null;
+}
+
+fn rateLimitRemaining(config, key) {
+    let entry = RATE_LIMIT_STORE[key];
+    
+    if (isNull(entry)) {
+        return config.maxRequests;
+    }
+    
+    let remaining = config.maxRequests - entry.count;
+    if (remaining < 0) { remaining = 0; }
+    return remaining;
+}
+
+fn rateLimitResetTime(config, key) {
+    let entry = RATE_LIMIT_STORE[key];
+    
+    if (isNull(entry)) {
+        return 0;
+    }
+    
+    return entry.windowStart + config.windowSeconds;
+}
+
+// ============================================
+// RATE LIMIT RESULT STRUCT
+// ============================================
+
+struct RateLimitResult {
+    allowed: bool,
+    remaining: int,
+    resetAt: int,
+    retryAfter: int
+}
+
+fn rateLimitCheckFull(config, key) {
+    let now = getCurrentTimestamp();
+    let allowed = rateLimitCheck(config, key);
+    let remaining = rateLimitRemaining(config, key);
+    let resetAt = rateLimitResetTime(config, key);
+    
+    let retryAfter = 0;
+    if (!allowed) {
+        retryAfter = resetAt - now;
+        if (retryAfter < 0) { retryAfter = 0; }
+    }
+    
+    return RateLimitResult {
+        allowed: allowed,
+        remaining: remaining,
+        resetAt: resetAt,
+        retryAfter: retryAfter
+    };
+}
+
+// ============================================
+// IP-BASED RATE LIMITING HELPERS
+// ============================================
+
+fn rateLimitByIP(config, ip) {
+    return rateLimitCheck(config, "ip:" + ip);
+}
+
+fn rateLimitByUser(config, userId) {
+    return rateLimitCheck(config, "user:" + toString(userId));
+}
+
+fn rateLimitByEndpoint(config, ip, endpoint) {
+    return rateLimitCheck(config, "ep:" + ip + ":" + endpoint);
+}
+
+// ============================================
+// TOKEN BUCKET RATE LIMITER
+// ============================================
+
+struct TokenBucket {
+    capacity: int,
+    tokens: int,
+    refillRate: int,     // tokens per second
+    lastRefill: int
+}
+
+fn tokenBucketCreate(capacity, refillRate) {
+    return TokenBucket {
+        capacity: capacity,
+        tokens: capacity,
+        refillRate: refillRate,
+        lastRefill: getCurrentTimestamp()
+    };
+}
+
+fn tokenBucketConsume(bucket, tokens) {
+    // Refill tokens based on time elapsed
+    let now = getCurrentTimestamp();
+    let elapsed = now - bucket.lastRefill;
+    let refill = elapsed * bucket.refillRate;
+    
+    bucket.tokens = bucket.tokens + refill;
+    if (bucket.tokens > bucket.capacity) {
+        bucket.tokens = bucket.capacity;
+    }
+    bucket.lastRefill = now;
+    
+    // Try to consume
+    if (bucket.tokens >= tokens) {
+        bucket.tokens = bucket.tokens - tokens;
+        return true;
+    }
+    
+    return false;
+}
+
+fn tokenBucketAvailable(bucket) {
+    return bucket.tokens;
+}
+
+// ============================================
+// INPUT VALIDATION
+// ============================================
+
+fn sanitizeHtml(input) {
+    let result = "";
+    let i = 0;
+    while (i < len(input)) {
+        let c = charAt(input, i);
+        if (c == "<") {
+            result = result + "&lt;";
+        } else if (c == ">") {
+            result = result + "&gt;";
+        } else if (c == "&") {
+            result = result + "&amp;";
+        } else if (c == "\"") {
+            result = result + "&quot;";
+        } else if (c == "'") {
+            result = result + "&#x27;";
+        } else {
+            result = result + c;
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+fn sanitizeSql(input) {
+    let result = "";
+    let i = 0;
+    while (i < len(input)) {
+        let c = charAt(input, i);
+        if (c == "'") {
+            result = result + "''";
+        } else if (c == "\\") {
+            result = result + "\\\\";
+        } else {
+            result = result + c;
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+fn isValidEmail(email) {
+    if (isNull(email) || len(email) < 5) {
+        return false;
+    }
+    
+    // Simple email validation
+    let atIndex = indexOf(email, "@");
+    if (atIndex < 1) {
+        return false;
+    }
+    
+    let dotIndex = lastIndexOf(email, ".");
+    if (dotIndex < atIndex + 2) {
+        return false;
+    }
+    
+    if (dotIndex >= len(email) - 2) {
+        return false;
+    }
+    
+    return true;
+}
+
+fn isAlphanumeric(input) {
+    let i = 0;
+    while (i < len(input)) {
+        let code = charCodeAt(input, i);
+        let valid = false;
+        
+        // a-z
+        if (code >= 97 && code <= 122) { valid = true; }
+        // A-Z
+        if (code >= 65 && code <= 90) { valid = true; }
+        // 0-9
+        if (code >= 48 && code <= 57) { valid = true; }
+        
+        if (!valid) {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}

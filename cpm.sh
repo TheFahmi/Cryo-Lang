@@ -43,7 +43,8 @@ show_help() {
     echo "Commands:"
     echo "  init [name]       Create a new Cryo project"
     echo "  build [file]      Build the project"
-    echo "  run [file]        Build and run the project"
+    echo "  run [file|script] Build and run, or run a script from [scripts]"
+    echo "  script <name>     Run a script defined in [scripts] section"
     echo "  install           Install all dependencies"
     echo "  add <pkg>         Add a dependency"
     echo "  remove <pkg>      Remove a dependency"
@@ -54,6 +55,11 @@ show_help() {
     echo "  clean             Remove build artifacts"
     echo "  version           Show version"
     echo "  help              Show this help"
+    echo ""
+    echo "Scripts (defined in cryo.toml [scripts]):"
+    echo "  apm run start                       # Run 'start' script"
+    echo "  apm run test                        # Run 'test' script"
+    echo "  apm script build                    # Run 'build' script"
     echo ""
     echo "Dependency types:"
     echo "  apm add pkg-name                    # From registry"
@@ -96,6 +102,16 @@ keywords = []
 [build]
 entry = "src/main.cryo"
 output = "build"
+
+[scripts]
+# Custom scripts that can be run with 'apm run <script>'
+# Example:
+# test = "cryo tests/test_all.cryo"
+# lint = "cryofmt --check src/"
+# bench = "cryo benchmarks/bench.cryo"
+start = "cryo src/main.cryo"
+test = "cryo tests/test.cryo"
+build = "cryo --compile src/main.cryo"
 EOF
 
     # Create main.cryo
@@ -983,6 +999,103 @@ cmd_run() {
     fi
 }
 
+# ============================================
+# SCRIPT RUNNER
+# ============================================
+
+cmd_script() {
+    local script_name="${1:-}"
+    
+    if [[ -z "$script_name" ]]; then
+        print_error "Script name required"
+        echo "Usage: apm script <name>"
+        echo ""
+        echo "Available scripts (from cryo.toml [scripts]):"
+        list_available_scripts
+        exit 1
+    fi
+    
+    if [[ ! -f "cryo.toml" ]]; then
+        print_error "cryo.toml not found"
+        exit 1
+    fi
+    
+    # Parse the script from cryo.toml
+    local script_cmd=""
+    local in_scripts=false
+    
+    while IFS= read -r line; do
+        # Check if we're in [scripts] section
+        if [[ "$line" =~ ^\[scripts\] ]]; then
+            in_scripts=true
+            continue
+        fi
+        
+        # Check if we've moved to another section
+        if [[ "$line" =~ ^\[.+\] ]] && [[ "$in_scripts" == true ]]; then
+            break
+        fi
+        
+        # Parse key = "value" in scripts section
+        if [[ "$in_scripts" == true ]]; then
+            # Skip comments and empty lines
+            if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
+                continue
+            fi
+            
+            # Match: script_name = "command"
+            if [[ "$line" =~ ^[[:space:]]*${script_name}[[:space:]]*=[[:space:]]*\"(.+)\" ]]; then
+                script_cmd="${BASH_REMATCH[1]}"
+                break
+            fi
+        fi
+    done < "cryo.toml"
+    
+    if [[ -z "$script_cmd" ]]; then
+        print_error "Script '$script_name' not found in [scripts] section"
+        echo ""
+        echo "Available scripts:"
+        list_available_scripts
+        exit 1
+    fi
+    
+    print_info "Running script: $script_name"
+    print_info "Command: $script_cmd"
+    echo "----------------------------------------"
+    
+    # Execute the script command
+    eval "$script_cmd"
+}
+
+list_available_scripts() {
+    if [[ ! -f "cryo.toml" ]]; then
+        return
+    fi
+    
+    local in_scripts=false
+    
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^\[scripts\] ]]; then
+            in_scripts=true
+            continue
+        fi
+        
+        if [[ "$line" =~ ^\[.+\] ]] && [[ "$in_scripts" == true ]]; then
+            break
+        fi
+        
+        if [[ "$in_scripts" == true ]]; then
+            if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
+                continue
+            fi
+            
+            if [[ "$line" =~ ^[[:space:]]*([a-zA-Z_][a-zA-Z0-9_-]*)[[:space:]]*= ]]; then
+                echo "  - ${BASH_REMATCH[1]}"
+            fi
+        fi
+    done < "cryo.toml"
+}
+
 cmd_clean() {
     print_header
     print_info "Cleaning build artifacts..."
@@ -1015,6 +1128,7 @@ main() {
         init)       cmd_init "$@" ;;
         build|b)    cmd_build "$@" ;;
         run|r)      cmd_run "$@" ;;
+        script|sc)  cmd_script "$@" ;;
         install|i)  cmd_install "$@" ;;
         add|a)      cmd_add "$@" ;;
         remove|rm)  cmd_remove "$@" ;;

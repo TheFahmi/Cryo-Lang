@@ -223,6 +223,63 @@ oauth2SetToken(client, "access-token", 3600, "refresh-token");
 
 ---
 
+## Security Utilities (security module)
+
+Security helpers for CSRF, rate limiting, and random generation.
+
+| Function | Description |
+|----------|-------------|
+| `secureRandomString(len, chars)` | Generate secure random string |
+| `secureRandomHex(len)` | Generate secure random hex string |
+| `csrfGenerate(expiry)` | Generate new CSRF token |
+| `csrfValidate(token, expected)` | Validate CSRF token |
+| `rateLimitCreate(max, window)` | Create rate limiter config |
+| `rateLimitCheck(config, key)` | Check rate limit for key |
+| `sanitizeHtml(input)` | Sanitize HTML input |
+| `isValidEmail(email)` | Basic email validation |
+
+---
+
+## Password Hashing (bcrypt module)
+
+Simplified bcrypt implementation.
+
+| Function | Description |
+|----------|-------------|
+| `bcryptHash(pwd, rounds)` | Hash password |
+| `bcryptVerify(pwd, hash)` | Verify password against hash |
+| `checkPasswordStrength(pwd)` | Check password strength (0-4) |
+| `bcryptGenerateSalt(rounds)` | Generate bcrypt salt |
+
+---
+
+## Structured Logging (logger module)
+
+JSON and text-based structured logging.
+
+| Function | Description |
+|----------|-------------|
+| `logInfo(msg)` | Log info message |
+| `logError(msg)` | Log error message |
+| `logInfoWithFields(msg, fields)` | Log with structured data |
+| `logSetFormat(fmt)` | Set format ("json" or "text") |
+| `logSetLevel(level)` | Set min log level (0=TRACE, 5=FATAL) |
+
+---
+
+## Health Checks (health module)
+
+Service health monitoring and Kubernetes probes.
+
+| Function | Description |
+|----------|-------------|
+| `healthLivenessHandler()` | Handler for /livez |
+| `healthReadinessHandler()` | Handler for /readyz |
+| `healthRegisterCheck(name, fn)` | Add custom health check |
+| `healthRunChecks()` | Run all checks |
+
+---
+
 ## Type Reference
 
 Cryo supports the following types:

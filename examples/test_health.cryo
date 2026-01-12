@@ -1,0 +1,130 @@
+// ============================================
+// CRYO HEALTH CHECK LIBRARY TEST
+// ============================================
+
+import "health"
+
+fn main() {
+    print("========================================");
+    print("   CRYO HEALTH CHECK LIBRARY TEST");
+    print("========================================");
+    print("");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Initialize Health
+    print("[TEST 1] Initialize Health Module");
+    healthInit("1.0.0");
+    print("  ✓ PASS: Health module initialized");
+    passed = passed + 1;
+    
+    // Test 2: Liveness Check
+    print("");
+    print("[TEST 2] Liveness Check");
+    let liveness = healthLivenessHandler();
+    
+    if (liveness["status"] == HEALTH_OK) {
+        print("  ✓ PASS: Liveness check returns OK");
+        print("  Status: " + liveness["status"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Liveness check failed");
+        failed = failed + 1;
+    }
+    
+    // Test 3: Readiness Check
+    print("");
+    print("[TEST 3] Readiness Check");
+    let readiness = healthReadinessHandler();
+    
+    if (readiness.status == HEALTH_OK && readiness.uptime >= 0) {
+        print("  ✓ PASS: Readiness check works");
+        print("  Status: " + readiness.status);
+        print("  Uptime: " + readiness.uptime + "s");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Readiness check failed");
+        failed = failed + 1;
+    }
+    
+    // Test 4: JSON Output
+    print("");
+    print("[TEST 4] JSON Output");
+    let json = healthReadinessJson();
+    
+    if (contains(json, "\"status\"") && contains(json, "\"uptime\"")) {
+        print("  ✓ PASS: JSON output correct");
+        print("  JSON: " + json);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: JSON output incorrect");
+        failed = failed + 1;
+    }
+    
+    // Test 5: Kubernetes Probes
+    print("");
+    print("[TEST 5] Kubernetes Probes");
+    let live = healthLivenessProbe();
+    let ready = healthReadinessProbe();
+    let startup = healthStartupProbe();
+    
+    if (live && ready && startup) {
+        print("  ✓ PASS: All probes return true");
+        print("  Liveness: " + live);
+        print("  Readiness: " + ready);
+        print("  Startup: " + startup);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Probe check failed");
+        failed = failed + 1;
+    }
+    
+    // Test 6: HTTP Status Codes
+    print("");
+    print("[TEST 6] HTTP Status Codes");
+    let okStatus = healthHttpStatus(HEALTH_OK);
+    let degradedStatus = healthHttpStatus(HEALTH_DEGRADED);
+    let downStatus = healthHttpStatus(HEALTH_DOWN);
+    
+    if (okStatus == 200 && degradedStatus == 200 && downStatus == 503) {
+        print("  ✓ PASS: HTTP status codes correct");
+        print("  OK: " + okStatus + ", Degraded: " + degradedStatus + ", Down: " + downStatus);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: HTTP status codes wrong");
+        failed = failed + 1;
+    }
+    
+    // Test 7: Full Health Report
+    print("");
+    print("[TEST 7] Full Health Report");
+    let full = healthFullHandler();
+    
+    if (notNull(full["memory"]) && notNull(full["status"])) {
+        print("  ✓ PASS: Full health report works");
+        print("  Memory used: " + full["memory"]["used"] + " bytes");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Full report missing fields");
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+        return 0;
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+        return 1;
+    }
+}

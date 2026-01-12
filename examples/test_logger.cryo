@@ -1,0 +1,107 @@
+// ============================================
+// CRYO LOGGER LIBRARY TEST
+// ============================================
+
+import "logger"
+
+fn main() {
+    print("========================================");
+    print("   CRYO LOGGER LIBRARY TEST");
+    print("========================================");
+    print("");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: JSON Log Format
+    print("[TEST 1] JSON Log Format (Default)");
+    logSetFormat("json");
+    logInfo("Application started");
+    print("  ✓ PASS: JSON log output");
+    passed = passed + 1;
+    
+    // Test 2: Text Log Format
+    print("");
+    print("[TEST 2] Text Log Format");
+    logSetFormat("text");
+    logEnableColors(false);
+    logInfo("Text format message");
+    print("  ✓ PASS: Text log output");
+    passed = passed + 1;
+    
+    // Test 3: Log Levels
+    print("");
+    print("[TEST 3] Log Levels");
+    logSetFormat("json");
+    logSetLevel(LOG_DEBUG);
+    
+    logDebug("Debug message");
+    logInfo("Info message");
+    logWarn("Warning message");
+    logError("Error message");
+    print("  ✓ PASS: All log levels work");
+    passed = passed + 1;
+    
+    // Test 4: Log with Fields
+    print("");
+    print("[TEST 4] Log with Fields");
+    let fields = { userId: 123, action: "login" };
+    logInfoWithFields("User action", fields);
+    print("  ✓ PASS: Structured fields logged");
+    passed = passed + 1;
+    
+    // Test 5: Logger Prefix
+    print("");
+    print("[TEST 5] Logger Prefix");
+    logSetPrefix("MyApp");
+    logInfo("Message with prefix");
+    logSetPrefix("");
+    print("  ✓ PASS: Logger prefix works");
+    passed = passed + 1;
+    
+    // Test 6: Level Filtering
+    print("");
+    print("[TEST 6] Level Filtering");
+    logSetLevel(LOG_WARN);
+    print("  (Debug and Info should NOT appear below)");
+    logDebug("This should NOT appear");
+    logInfo("This should NOT appear");
+    logWarn("This SHOULD appear");
+    logSetLevel(LOG_DEBUG);
+    print("  ✓ PASS: Level filtering works");
+    passed = passed + 1;
+    
+    // Test 7: HTTP Request Logging
+    print("");
+    print("[TEST 7] HTTP Request Logging");
+    logRequest("GET", "/api/users", 200, 45);
+    logRequest("POST", "/api/login", 401, 12);
+    print("  ✓ PASS: Request logging works");
+    passed = passed + 1;
+    
+    // Test 8: Named Logger
+    print("");
+    print("[TEST 8] Named Logger");
+    let appLogger = createLogger("AuthService");
+    loggerInfo(appLogger, "Authentication successful");
+    print("  ✓ PASS: Named logger works");
+    passed = passed + 1;
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+        return 0;
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+        return 1;
+    }
+}

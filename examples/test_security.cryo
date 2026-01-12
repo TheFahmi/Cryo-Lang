@@ -1,0 +1,184 @@
+// ============================================
+// CRYO SECURITY UTILITIES TEST
+// ============================================
+
+import "security"
+
+fn main() {
+    print("========================================");
+    print("   CRYO SECURITY UTILITIES TEST");
+    print("========================================");
+    print("");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Secure Random String
+    print("[TEST 1] Secure Random String");
+    let random1 = secureRandomString(32, null);
+    let random2 = secureRandomString(32, null);
+    
+    if (len(random1) == 32 && random1 != random2) {
+        print("  ✓ PASS: Random strings generated");
+        print("  String 1: " + random1);
+        print("  String 2: " + random2);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Random generation issue");
+        failed = failed + 1;
+    }
+    
+    // Test 2: Secure Random Hex
+    print("");
+    print("[TEST 2] Secure Random Hex");
+    let hex = secureRandomHex(64);
+    
+    if (len(hex) == 64) {
+        print("  ✓ PASS: Hex string generated");
+        print("  Hex: " + hex);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Hex generation failed");
+        failed = failed + 1;
+    }
+    
+    // Test 3: CSRF Token Generation
+    print("");
+    print("[TEST 3] CSRF Token Generation");
+    let csrf = csrfGenerate(3600);
+    
+    if (len(csrf.token) == 64 && csrf.expiresAt > csrf.createdAt) {
+        print("  ✓ PASS: CSRF token generated");
+        print("  Token: " + substring(csrf.token, 0, 32) + "...");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: CSRF generation failed");
+        failed = failed + 1;
+    }
+    
+    // Test 4: CSRF Validation
+    print("");
+    print("[TEST 4] CSRF Validation");
+    let validCsrf = csrfValidate(csrf.token, csrf);
+    let invalidCsrf = csrfValidate("wrongtoken", csrf);
+    
+    if (validCsrf && !invalidCsrf) {
+        print("  ✓ PASS: CSRF validation works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: CSRF validation failed");
+        failed = failed + 1;
+    }
+    
+    // Test 5: Rate Limiting
+    print("");
+    print("[TEST 5] Rate Limiting");
+    let limiter = rateLimitCreate(3, 60);  // 3 requests per 60 seconds
+    
+    let r1 = rateLimitCheck(limiter, "test-ip");
+    let r2 = rateLimitCheck(limiter, "test-ip");
+    let r3 = rateLimitCheck(limiter, "test-ip");
+    let r4 = rateLimitCheck(limiter, "test-ip");  // Should be denied
+    
+    if (r1 && r2 && r3 && !r4) {
+        print("  ✓ PASS: Rate limiting works");
+        print("  Requests 1-3 allowed, 4th blocked");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Rate limiting failed");
+        failed = failed + 1;
+    }
+    
+    // Test 6: Rate Limit Remaining
+    print("");
+    print("[TEST 6] Rate Limit Remaining");
+    let remaining = rateLimitRemaining(limiter, "test-ip");
+    
+    if (remaining == 0) {
+        print("  ✓ PASS: Remaining count correct (0)");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Remaining count wrong: " + remaining);
+        failed = failed + 1;
+    }
+    
+    // Test 7: HTML Sanitization
+    print("");
+    print("[TEST 7] HTML Sanitization");
+    let dirty = "<script>alert('xss')</script>";
+    let clean = sanitizeHtml(dirty);
+    
+    if (!contains(clean, "<script>") && contains(clean, "&lt;script&gt;")) {
+        print("  ✓ PASS: HTML sanitized");
+        print("  Output: " + clean);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Sanitization failed");
+        failed = failed + 1;
+    }
+    
+    // Test 8: Email Validation
+    print("");
+    print("[TEST 8] Email Validation");
+    let validEmail = isValidEmail("user@example.com");
+    let invalidEmail = isValidEmail("notanemail");
+    
+    if (validEmail && !invalidEmail) {
+        print("  ✓ PASS: Email validation works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Email validation failed");
+        failed = failed + 1;
+    }
+    
+    // Test 9: Alphanumeric Check
+    print("");
+    print("[TEST 9] Alphanumeric Check");
+    let alphaOk = isAlphanumeric("Hello123");
+    let alphaBad = isAlphanumeric("Hello@123");
+    
+    if (alphaOk && !alphaBad) {
+        print("  ✓ PASS: Alphanumeric check works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Alphanumeric check failed");
+        failed = failed + 1;
+    }
+    
+    // Test 10: Token Bucket
+    print("");
+    print("[TEST 10] Token Bucket Rate Limiter");
+    let bucket = tokenBucketCreate(5, 1);  // 5 capacity, 1/sec refill
+    
+    let consumed = 0;
+    if (tokenBucketConsume(bucket, 1)) { consumed = consumed + 1; }
+    if (tokenBucketConsume(bucket, 1)) { consumed = consumed + 1; }
+    if (tokenBucketConsume(bucket, 1)) { consumed = consumed + 1; }
+    
+    if (consumed == 3 && tokenBucketAvailable(bucket) == 2) {
+        print("  ✓ PASS: Token bucket works");
+        print("  Consumed: " + consumed + ", Remaining: " + tokenBucketAvailable(bucket));
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Token bucket failed");
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+        return 0;
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+        return 1;
+    }
+}

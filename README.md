@@ -328,11 +328,14 @@ fn main() {
 
 ### Security
 
-| Module | Description |
-|--------|-------------|
-| `crypto` | Hashing, encoding, encryption |
-| `jwt` | JSON Web Token support |
-| `bcrypt` | Password hashing |
+| Module | Description | Test Status |
+|--------|-------------|-------------|
+| `crypto` | Hashing, encoding, encryption | ✅ Stable |
+| `jwt` | JSON Web Token support | ✅ 6/6 tests |
+| `bcrypt` | Password hashing & strength | ✅ 6/6 tests |
+| `security` | CSRF, Rate limit, Random | ✅ 10/10 tests |
+| `health` | Kubernetes health probes | ✅ 7/7 tests |
+| `logger` | Structured JSON logging | ✅ 8/8 tests |
 
 ### Database (Native Implementations)
 

@@ -1,0 +1,399 @@
+// ============================================
+// CRYO LOGGER LIBRARY
+// Structured JSON logging
+// Version: 1.0.0
+// ============================================
+
+import "string"
+
+let LOGGER_VERSION = "1.0.0";
+
+// ============================================
+// LOG LEVELS
+// ============================================
+
+let LOG_TRACE = 0;
+let LOG_DEBUG = 1;
+let LOG_INFO = 2;
+let LOG_WARN = 3;
+let LOG_ERROR = 4;
+let LOG_FATAL = 5;
+
+// ============================================
+// LOGGER CONFIGURATION
+// ============================================
+
+struct LoggerConfig {
+    level: int,
+    format: string,      // "json" or "text"
+    timestamp: bool,
+    colors: bool,
+    prefix: string
+}
+
+// Global logger config
+let LOGGER_CONFIG = LoggerConfig {
+    level: LOG_INFO,
+    format: "json",
+    timestamp: true,
+    colors: true,
+    prefix: ""
+};
+
+// ============================================
+// CONFIGURATION FUNCTIONS
+// ============================================
+
+fn logSetLevel(level) {
+    LOGGER_CONFIG.level = level;
+}
+
+fn logSetFormat(format) {
+    LOGGER_CONFIG.format = format;
+}
+
+fn logSetPrefix(prefix) {
+    LOGGER_CONFIG.prefix = prefix;
+}
+
+fn logEnableTimestamp(enabled) {
+    LOGGER_CONFIG.timestamp = enabled;
+}
+
+fn logEnableColors(enabled) {
+    LOGGER_CONFIG.colors = enabled;
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+fn isNull(val) {
+    return typeof(val) == "null";
+}
+
+fn notNull(val) {
+    return typeof(val) != "null";
+}
+
+fn getCurrentTimestamp() {
+    return 1736665200;
+}
+
+fn formatTimestamp() {
+    // Returns ISO 8601 format timestamp
+    // In real implementation, this would use actual time
+    return "2026-01-12T14:25:00.000Z";
+}
+
+fn levelToString(level) {
+    if (level == LOG_TRACE) { return "TRACE"; }
+    if (level == LOG_DEBUG) { return "DEBUG"; }
+    if (level == LOG_INFO) { return "INFO"; }
+    if (level == LOG_WARN) { return "WARN"; }
+    if (level == LOG_ERROR) { return "ERROR"; }
+    if (level == LOG_FATAL) { return "FATAL"; }
+    return "UNKNOWN";
+}
+
+fn levelToColor(level) {
+    // ANSI color codes
+    if (level == LOG_TRACE) { return "\x1b[37m"; }  // White
+    if (level == LOG_DEBUG) { return "\x1b[36m"; }  // Cyan
+    if (level == LOG_INFO) { return "\x1b[32m"; }   // Green
+    if (level == LOG_WARN) { return "\x1b[33m"; }   // Yellow
+    if (level == LOG_ERROR) { return "\x1b[31m"; }  // Red
+    if (level == LOG_FATAL) { return "\x1b[35m"; }  // Magenta
+    return "\x1b[0m";
+}
+
+// ============================================
+// JSON FORMATTING
+// ============================================
+
+fn escapeJsonString(s) {
+    let result = "";
+    let i = 0;
+    while (i < len(s)) {
+        let c = charAt(s, i);
+        if (c == "\"") {
+            result = result + "\\\"";
+        } else if (c == "\\") {
+            result = result + "\\\\";
+        } else if (c == "\n") {
+            result = result + "\\n";
+        } else if (c == "\t") {
+            result = result + "\\t";
+        } else if (c == "\r") {
+            result = result + "\\r";
+        } else {
+            result = result + c;
+        }
+        i = i + 1;
+    }
+    return result;
+}
+
+fn toJsonValue(val) {
+    if (isNull(val)) {
+        return "null";
+    }
+    
+    let t = typeof(val);
+    
+    if (t == "string") {
+        return "\"" + escapeJsonString(val) + "\"";
+    }
+    
+    if (t == "int" || t == "number" || t == "float") {
+        return toString(val);
+    }
+    
+    if (t == "bool") {
+        if (val) { return "true"; }
+        return "false";
+    }
+    
+    if (t == "array") {
+        let result = "[";
+        let i = 0;
+        while (i < len(val)) {
+            if (i > 0) { result = result + ","; }
+            result = result + toJsonValue(val[i]);
+            i = i + 1;
+        }
+        return result + "]";
+    }
+    
+    return "\"[object]\"";
+}
+
+// ============================================
+// CORE LOGGING FUNCTION
+// ============================================
+
+fn logMessage(level, message, fields) {
+    // Check if we should log at this level
+    if (level < LOGGER_CONFIG.level) {
+        return;
+    }
+    
+    let output = "";
+    
+    if (LOGGER_CONFIG.format == "json") {
+        output = formatJsonLog(level, message, fields);
+    } else {
+        output = formatTextLog(level, message, fields);
+    }
+    
+    print(output);
+}
+
+fn formatJsonLog(level, message, fields) {
+    let json = "{";
+    
+    // Add timestamp
+    if (LOGGER_CONFIG.timestamp) {
+        json = json + "\"timestamp\":\"" + formatTimestamp() + "\",";
+    }
+    
+    // Add level
+    json = json + "\"level\":\"" + levelToString(level) + "\",";
+    
+    // Add prefix if set
+    if (LOGGER_CONFIG.prefix != "") {
+        json = json + "\"logger\":\"" + escapeJsonString(LOGGER_CONFIG.prefix) + "\",";
+    }
+    
+    // Add message
+    json = json + "\"message\":" + toJsonValue(message);
+    
+    // Add extra fields
+    if (notNull(fields)) {
+        // For now, we'll add fields as a nested object
+        // In real implementation, we'd iterate over keys
+        json = json + ",\"data\":" + toJsonValue(fields);
+    }
+    
+    json = json + "}";
+    return json;
+}
+
+fn formatTextLog(level, message, fields) {
+    let output = "";
+    
+    // Add color if enabled
+    if (LOGGER_CONFIG.colors) {
+        output = output + levelToColor(level);
+    }
+    
+    // Add timestamp
+    if (LOGGER_CONFIG.timestamp) {
+        output = output + "[" + formatTimestamp() + "] ";
+    }
+    
+    // Add level
+    output = output + "[" + levelToString(level) + "] ";
+    
+    // Add prefix
+    if (LOGGER_CONFIG.prefix != "") {
+        output = output + "[" + LOGGER_CONFIG.prefix + "] ";
+    }
+    
+    // Add message
+    output = output + message;
+    
+    // Add fields
+    if (notNull(fields)) {
+        output = output + " " + toString(fields);
+    }
+    
+    // Reset color
+    if (LOGGER_CONFIG.colors) {
+        output = output + "\x1b[0m";
+    }
+    
+    return output;
+}
+
+// ============================================
+// CONVENIENCE LOG FUNCTIONS
+// ============================================
+
+fn logTrace(message) {
+    logMessage(LOG_TRACE, message, null);
+}
+
+fn logTraceWithFields(message, fields) {
+    logMessage(LOG_TRACE, message, fields);
+}
+
+fn logDebug(message) {
+    logMessage(LOG_DEBUG, message, null);
+}
+
+fn logDebugWithFields(message, fields) {
+    logMessage(LOG_DEBUG, message, fields);
+}
+
+fn logInfo(message) {
+    logMessage(LOG_INFO, message, null);
+}
+
+fn logInfoWithFields(message, fields) {
+    logMessage(LOG_INFO, message, fields);
+}
+
+fn logWarn(message) {
+    logMessage(LOG_WARN, message, null);
+}
+
+fn logWarnWithFields(message, fields) {
+    logMessage(LOG_WARN, message, fields);
+}
+
+fn logError(message) {
+    logMessage(LOG_ERROR, message, null);
+}
+
+fn logErrorWithFields(message, fields) {
+    logMessage(LOG_ERROR, message, fields);
+}
+
+fn logFatal(message) {
+    logMessage(LOG_FATAL, message, null);
+}
+
+fn logFatalWithFields(message, fields) {
+    logMessage(LOG_FATAL, message, fields);
+}
+
+// ============================================
+// STRUCTURED LOGGING HELPERS
+// ============================================
+
+fn logRequest(method, path, status, duration) {
+    let fields = {
+        method: method,
+        path: path,
+        status: status,
+        duration_ms: duration
+    };
+    
+    if (status >= 500) {
+        logErrorWithFields("HTTP Request", fields);
+    } else if (status >= 400) {
+        logWarnWithFields("HTTP Request", fields);
+    } else {
+        logInfoWithFields("HTTP Request", fields);
+    }
+}
+
+fn logDatabase(operation, table, duration, affected) {
+    let fields = {
+        operation: operation,
+        table: table,
+        duration_ms: duration,
+        affected_rows: affected
+    };
+    
+    logDebugWithFields("Database", fields);
+}
+
+fn logError(message, error) {
+    let fields = {
+        error: error
+    };
+    
+    logErrorWithFields(message, fields);
+}
+
+// ============================================
+// LOGGER INSTANCE CREATION
+// ============================================
+
+struct Logger {
+    name: string,
+    level: int
+}
+
+fn createLogger(name) {
+    return Logger {
+        name: name,
+        level: LOG_INFO
+    };
+}
+
+fn loggerSetLevel(logger, level) {
+    logger.level = level;
+}
+
+fn loggerInfo(logger, message) {
+    let oldPrefix = LOGGER_CONFIG.prefix;
+    LOGGER_CONFIG.prefix = logger.name;
+    logInfo(message);
+    LOGGER_CONFIG.prefix = oldPrefix;
+}
+
+fn loggerError(logger, message) {
+    let oldPrefix = LOGGER_CONFIG.prefix;
+    LOGGER_CONFIG.prefix = logger.name;
+    logError(message);
+    LOGGER_CONFIG.prefix = oldPrefix;
+}
+
+fn loggerDebug(logger, message) {
+    if (logger.level <= LOG_DEBUG) {
+        let oldPrefix = LOGGER_CONFIG.prefix;
+        LOGGER_CONFIG.prefix = logger.name;
+        logDebug(message);
+        LOGGER_CONFIG.prefix = oldPrefix;
+    }
+}
+
+fn loggerWarn(logger, message) {
+    let oldPrefix = LOGGER_CONFIG.prefix;
+    LOGGER_CONFIG.prefix = logger.name;
+    logWarn(message);
+    LOGGER_CONFIG.prefix = oldPrefix;
+}
