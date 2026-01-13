@@ -1,0 +1,185 @@
+// Test LLM API Library
+import "llm"
+
+fn main() {
+    print("========================================");
+    print("   CRYO LLM API LIBRARY TEST");
+    print("========================================");
+    
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Configure Provider
+    print("");
+    print("[TEST 1] Configure Provider");
+    llmSetApiKey("sk-test-key");
+    llmSetProvider("openai");
+    llmSetModel("gpt-4");
+    
+    let config = llmGetConfig();
+    if (config["provider"] == "openai" && config["model"] == "gpt-4" && config["hasApiKey"]) {
+        print("  ✓ PASS: Provider configured");
+        print("  Model: " + config["model"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Configuration failed");
+        failed = failed + 1;
+    }
+    
+    // Test 2: Create Messages
+    print("");
+    print("[TEST 2] Create Messages");
+    let sysMsg = llmSystem("You are a helpful assistant");
+    let userMsg = llmUser("Hello!");
+    
+    if (sysMsg["role"] == "system" && userMsg["role"] == "user") {
+        print("  ✓ PASS: Messages created");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Message creation failed");
+        failed = failed + 1;
+    }
+    
+    // Test 3: Chat Completion
+    print("");
+    print("[TEST 3] Chat Completion");
+    let messages = [];
+    push(messages, llmSystem("You are a helpful assistant"));
+    push(messages, llmUser("What is 2+2?"));
+    
+    let chatResult = llmChat(messages, null);
+    
+    if (chatResult["success"] && len(chatResult["content"]) > 0) {
+        print("  ✓ PASS: Chat completion works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Chat completion failed");
+        failed = failed + 1;
+    }
+    
+    // Test 4: Simple Completion
+    print("");
+    print("[TEST 4] Simple Completion");
+    let result = llmComplete("Explain quantum physics", "Be concise");
+    
+    if (result["success"] && result["response"]["model"] == "gpt-4") {
+        print("  ✓ PASS: Simple completion works");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Simple completion failed");
+        failed = failed + 1;
+    }
+    
+    // Test 5: Usage Tracking
+    print("");
+    print("[TEST 5] Usage Tracking");
+    let usage = result["response"]["usage"];
+    
+    if (usage["totalTokens"] > 0) {
+        print("  ✓ PASS: Usage tracked");
+        print("  Total tokens: " + usage["totalTokens"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Usage not tracked");
+        failed = failed + 1;
+    }
+    
+    // Test 6: Embeddings
+    print("");
+    print("[TEST 6] Embeddings");
+    let embResult = llmEmbed("Hello, world!");
+    
+    if (embResult["success"] && embResult["dimensions"] == 1536) {
+        print("  ✓ PASS: Embedding generated");
+        print("  Dimensions: " + embResult["dimensions"]);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Embedding failed");
+        failed = failed + 1;
+    }
+    
+    // Test 7: Cosine Similarity
+    print("");
+    print("[TEST 7] Cosine Similarity");
+    let emb1 = llmEmbed("Hello");
+    let emb2 = llmEmbed("Hi there");
+    let similarity = llmCosineSimilarity(emb1["embedding"], emb2["embedding"]);
+    
+    // Just check that it returns a number (not a function failure)
+    if (typeof(similarity) == "int" || typeof(similarity) == "float") {
+        print("  ✓ PASS: Similarity computed");
+        print("  Value: " + similarity);
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Similarity failed");
+        failed = failed + 1;
+    }
+    
+    // Test 8: Tool Definition
+    print("");
+    print("[TEST 8] Tool Definition");
+    let params = {};
+    params["type"] = "object";
+    
+    let tool = llmDefineTool("get_weather", "Get weather for a location", params);
+    
+    if (tool["type"] == "function" && tool["function"]["name"] == "get_weather") {
+        print("  ✓ PASS: Tool defined");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Tool definition failed");
+        failed = failed + 1;
+    }
+    
+    // Test 9: Conversation Management
+    print("");
+    print("[TEST 9] Conversation Management");
+    llmCreateConversation("conv-1");
+    llmAddToConversation("conv-1", llmUser("Hello"));
+    llmAddToConversation("conv-1", llmAssistant("Hi there!"));
+    
+    let conv = llmGetConversation("conv-1");
+    
+    if (conv != null && len(conv["messages"]) == 2) {
+        print("  ✓ PASS: Conversation managed");
+        print("  Messages: " + len(conv["messages"]));
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Conversation failed");
+        failed = failed + 1;
+    }
+    
+    // Test 10: Multiple Providers
+    print("");
+    print("[TEST 10] Multiple Providers");
+    llmSetProvider("anthropic");
+    let anthropicConfig = llmGetConfig();
+    llmSetProvider("google");
+    let googleConfig = llmGetConfig();
+    
+    if (anthropicConfig["model"] == "claude-3-sonnet-20240229" && googleConfig["model"] == "gemini-pro") {
+        print("  ✓ PASS: Multiple providers work");
+        passed = passed + 1;
+    } else {
+        print("  ✗ FAIL: Provider switching broken");
+        failed = failed + 1;
+    }
+    
+    // Summary
+    print("");
+    print("========================================");
+    print("   TEST SUMMARY");
+    print("========================================");
+    print("  Passed: " + passed);
+    print("  Failed: " + failed);
+    print("  Total:  " + (passed + failed));
+    print("");
+    
+    if (failed == 0) {
+        print("  ✓ ALL TESTS PASSED!");
+    } else {
+        print("  ✗ SOME TESTS FAILED");
+    }
+    
+    return 0;
+}

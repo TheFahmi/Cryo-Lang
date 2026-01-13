@@ -1,0 +1,511 @@
+// ============================================
+// CRYO TENSOR LIBRARY
+// N-dimensional array operations for ML
+// Version: 1.0.0
+// ============================================
+
+// ============================================
+// TENSOR CREATION
+// ============================================
+
+// Create 1D tensor (vector)
+fn tensorCreate1D(data) {
+    let tensor = {};
+    tensor["_type"] = "tensor";
+    tensor["data"] = data;
+    tensor["shape"] = [len(data)];
+    tensor["ndim"] = 1;
+    tensor["size"] = len(data);
+    tensor["dtype"] = "float64";
+    return tensor;
+}
+
+// Create 2D tensor (matrix)
+fn tensorCreate2D(rows, cols, initialValue) {
+    let data = [];
+    let total = rows * cols;
+    let i = 0;
+    while (i < total) {
+        push(data, initialValue);
+        i = i + 1;
+    }
+    
+    let tensor = {};
+    tensor["_type"] = "tensor";
+    tensor["data"] = data;
+    tensor["shape"] = [rows, cols];
+    tensor["ndim"] = 2;
+    tensor["size"] = total;
+    tensor["dtype"] = "float64";
+    return tensor;
+}
+
+// Create tensor from nested array (2D)
+fn tensorFromArray2D(arr) {
+    let rows = len(arr);
+    let cols = len(arr[0]);
+    let data = [];
+    
+    let i = 0;
+    while (i < rows) {
+        let j = 0;
+        while (j < cols) {
+            push(data, arr[i][j]);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    
+    let tensor = {};
+    tensor["_type"] = "tensor";
+    tensor["data"] = data;
+    tensor["shape"] = [rows, cols];
+    tensor["ndim"] = 2;
+    tensor["size"] = rows * cols;
+    tensor["dtype"] = "float64";
+    return tensor;
+}
+
+// Create zeros tensor
+fn tensorZeros(shape) {
+    let size = 1;
+    let i = 0;
+    while (i < len(shape)) {
+        size = size * shape[i];
+        i = i + 1;
+    }
+    
+    let data = [];
+    i = 0;
+    while (i < size) {
+        push(data, 0);
+        i = i + 1;
+    }
+    
+    let tensor = {};
+    tensor["_type"] = "tensor";
+    tensor["data"] = data;
+    tensor["shape"] = shape;
+    tensor["ndim"] = len(shape);
+    tensor["size"] = size;
+    tensor["dtype"] = "float64";
+    return tensor;
+}
+
+// Create ones tensor
+fn tensorOnes(shape) {
+    let size = 1;
+    let i = 0;
+    while (i < len(shape)) {
+        size = size * shape[i];
+        i = i + 1;
+    }
+    
+    let data = [];
+    i = 0;
+    while (i < size) {
+        push(data, 1);
+        i = i + 1;
+    }
+    
+    let tensor = {};
+    tensor["_type"] = "tensor";
+    tensor["data"] = data;
+    tensor["shape"] = shape;
+    tensor["ndim"] = len(shape);
+    tensor["size"] = size;
+    tensor["dtype"] = "float64";
+    return tensor;
+}
+
+// Create identity matrix
+fn tensorEye(n) {
+    let data = [];
+    let i = 0;
+    while (i < n) {
+        let j = 0;
+        while (j < n) {
+            if (i == j) {
+                push(data, 1);
+            } else {
+                push(data, 0);
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    
+    let tensor = {};
+    tensor["_type"] = "tensor";
+    tensor["data"] = data;
+    tensor["shape"] = [n, n];
+    tensor["ndim"] = 2;
+    tensor["size"] = n * n;
+    tensor["dtype"] = "float64";
+    return tensor;
+}
+
+// ============================================
+// TENSOR ACCESS
+// ============================================
+
+// Get element at index (1D)
+fn tensorGet1D(t, i) {
+    return t["data"][i];
+}
+
+// Set element at index (1D)
+fn tensorSet1D(t, i, value) {
+    t["data"][i] = value;
+}
+
+// Get element at row, col (2D)
+fn tensorGet2D(t, row, col) {
+    let cols = t["shape"][1];
+    let idx = row * cols + col;
+    return t["data"][idx];
+}
+
+// Set element at row, col (2D)
+fn tensorSet2D(t, row, col, value) {
+    let cols = t["shape"][1];
+    let idx = row * cols + col;
+    t["data"][idx] = value;
+}
+
+// ============================================
+// ELEMENT-WISE OPERATIONS
+// ============================================
+
+// Add two tensors
+fn tensorAdd(a, b) {
+    let data = [];
+    let i = 0;
+    while (i < a["size"]) {
+        push(data, a["data"][i] + b["data"][i]);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = a["shape"];
+    result["ndim"] = a["ndim"];
+    result["size"] = a["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Subtract tensors
+fn tensorSub(a, b) {
+    let data = [];
+    let i = 0;
+    while (i < a["size"]) {
+        push(data, a["data"][i] - b["data"][i]);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = a["shape"];
+    result["ndim"] = a["ndim"];
+    result["size"] = a["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Multiply tensors element-wise
+fn tensorMul(a, b) {
+    let data = [];
+    let i = 0;
+    while (i < a["size"]) {
+        push(data, a["data"][i] * b["data"][i]);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = a["shape"];
+    result["ndim"] = a["ndim"];
+    result["size"] = a["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Scale tensor by scalar
+fn tensorScale(t, scalar) {
+    let data = [];
+    let i = 0;
+    while (i < t["size"]) {
+        push(data, t["data"][i] * scalar);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = t["shape"];
+    result["ndim"] = t["ndim"];
+    result["size"] = t["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// ============================================
+// MATRIX OPERATIONS
+// ============================================
+
+// Matrix multiplication (2D x 2D)
+fn tensorMatMul(a, b) {
+    let aRows = a["shape"][0];
+    let aCols = a["shape"][1];
+    let bRows = b["shape"][0];
+    let bCols = b["shape"][1];
+    
+    if (aCols != bRows) {
+        return null; // Shape mismatch
+    }
+    
+    let data = [];
+    let i = 0;
+    while (i < aRows) {
+        let j = 0;
+        while (j < bCols) {
+            let sum = 0;
+            let k = 0;
+            while (k < aCols) {
+                let aVal = tensorGet2D(a, i, k);
+                let bVal = tensorGet2D(b, k, j);
+                sum = sum + aVal * bVal;
+                k = k + 1;
+            }
+            push(data, sum);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = [aRows, bCols];
+    result["ndim"] = 2;
+    result["size"] = aRows * bCols;
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Transpose 2D tensor
+fn tensorTranspose(t) {
+    let rows = t["shape"][0];
+    let cols = t["shape"][1];
+    let data = [];
+    
+    let j = 0;
+    while (j < cols) {
+        let i = 0;
+        while (i < rows) {
+            push(data, tensorGet2D(t, i, j));
+            i = i + 1;
+        }
+        j = j + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = [cols, rows];
+    result["ndim"] = 2;
+    result["size"] = t["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Dot product (1D x 1D)
+fn tensorDot(a, b) {
+    let sum = 0;
+    let i = 0;
+    while (i < a["size"]) {
+        sum = sum + a["data"][i] * b["data"][i];
+        i = i + 1;
+    }
+    return sum;
+}
+
+// ============================================
+// REDUCTIONS
+// ============================================
+
+// Sum all elements
+fn tensorSum(t) {
+    let sum = 0;
+    let i = 0;
+    while (i < t["size"]) {
+        sum = sum + t["data"][i];
+        i = i + 1;
+    }
+    return sum;
+}
+
+// Mean of all elements
+fn tensorMean(t) {
+    return tensorSum(t) / t["size"];
+}
+
+// Max element
+fn tensorMax(t) {
+    let max = t["data"][0];
+    let i = 1;
+    while (i < t["size"]) {
+        if (t["data"][i] > max) {
+            max = t["data"][i];
+        }
+        i = i + 1;
+    }
+    return max;
+}
+
+// Min element
+fn tensorMin(t) {
+    let min = t["data"][0];
+    let i = 1;
+    while (i < t["size"]) {
+        if (t["data"][i] < min) {
+            min = t["data"][i];
+        }
+        i = i + 1;
+    }
+    return min;
+}
+
+// Argmax (index of max element)
+fn tensorArgmax(t) {
+    let maxIdx = 0;
+    let maxVal = t["data"][0];
+    let i = 1;
+    while (i < t["size"]) {
+        if (t["data"][i] > maxVal) {
+            maxVal = t["data"][i];
+            maxIdx = i;
+        }
+        i = i + 1;
+    }
+    return maxIdx;
+}
+
+// ============================================
+// ACTIVATION FUNCTIONS
+// ============================================
+
+// ReLU activation
+fn tensorRelu(t) {
+    let data = [];
+    let i = 0;
+    while (i < t["size"]) {
+        if (t["data"][i] > 0) {
+            push(data, t["data"][i]);
+        } else {
+            push(data, 0);
+        }
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = t["shape"];
+    result["ndim"] = t["ndim"];
+    result["size"] = t["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Softmax (simplified - for 1D)
+fn tensorSoftmax(t) {
+    let max = tensorMax(t);
+    let expSum = 0;
+    let expData = [];
+    
+    let i = 0;
+    while (i < t["size"]) {
+        // e^(x - max) for numerical stability (simplified)
+        let diff = t["data"][i] - max;
+        let exp = 1 + diff + diff * diff / 2; // Taylor approximation
+        push(expData, exp);
+        expSum = expSum + exp;
+        i = i + 1;
+    }
+    
+    let data = [];
+    i = 0;
+    while (i < t["size"]) {
+        push(data, expData[i] / expSum);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = data;
+    result["shape"] = t["shape"];
+    result["ndim"] = t["ndim"];
+    result["size"] = t["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// ============================================
+// RESHAPING
+// ============================================
+
+// Reshape tensor
+fn tensorReshape(t, newShape) {
+    let newSize = 1;
+    let i = 0;
+    while (i < len(newShape)) {
+        newSize = newSize * newShape[i];
+        i = i + 1;
+    }
+    
+    if (newSize != t["size"]) {
+        return null; // Size mismatch
+    }
+    
+    let result = {};
+    result["_type"] = "tensor";
+    result["data"] = t["data"]; // Share data
+    result["shape"] = newShape;
+    result["ndim"] = len(newShape);
+    result["size"] = t["size"];
+    result["dtype"] = "float64";
+    return result;
+}
+
+// Flatten to 1D
+fn tensorFlatten(t) {
+    return tensorReshape(t, [t["size"]]);
+}
+
+// ============================================
+// UTILITY
+// ============================================
+
+// Check if tensor
+fn isTensor(t) {
+    return typeof(t) == "struct" && t["_type"] == "tensor";
+}
+
+// Get tensor shape
+fn tensorShape(t) {
+    return t["shape"];
+}
+
+// Get tensor size
+fn tensorSize(t) {
+    return t["size"];
+}
+
+fn tensorVersion() {
+    return "1.0.0";
+}

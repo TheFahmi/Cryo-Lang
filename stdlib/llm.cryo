@@ -1,0 +1,367 @@
+// ============================================
+// CRYO LLM API LIBRARY
+// Large Language Model API clients
+// Version: 1.0.0
+// ============================================
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+let _llmApiKey = "";
+let _llmProvider = "openai";
+let _llmModel = "gpt-4";
+let _llmBaseUrl = "";
+let _llmTimeout = 30000;
+
+// Set API key
+fn llmSetApiKey(apiKey) {
+    _llmApiKey = apiKey;
+}
+
+// Set provider (openai, anthropic, google)
+fn llmSetProvider(provider) {
+    _llmProvider = provider;
+    
+    if (provider == "openai") {
+        _llmBaseUrl = "https://api.openai.com/v1";
+        _llmModel = "gpt-4";
+    }
+    if (provider == "anthropic") {
+        _llmBaseUrl = "https://api.anthropic.com/v1";
+        _llmModel = "claude-3-sonnet-20240229";
+    }
+    if (provider == "google") {
+        _llmBaseUrl = "https://generativelanguage.googleapis.com/v1";
+        _llmModel = "gemini-pro";
+    }
+}
+
+// Set model
+fn llmSetModel(model) {
+    _llmModel = model;
+}
+
+// Set timeout
+fn llmSetTimeout(ms) {
+    _llmTimeout = ms;
+}
+
+// Get config
+fn llmGetConfig() {
+    let config = {};
+    config["provider"] = _llmProvider;
+    config["model"] = _llmModel;
+    config["baseUrl"] = _llmBaseUrl;
+    config["hasApiKey"] = _llmApiKey != "";
+    config["timeout"] = _llmTimeout;
+    return config;
+}
+
+// ============================================
+// CHAT COMPLETION
+// ============================================
+
+let _llmRequestCounter = 0;
+let _llmHistory = [];
+
+// Create chat message
+fn llmMessage(role, content) {
+    let msg = {};
+    msg["role"] = role;
+    msg["content"] = content;
+    return msg;
+}
+
+// System message
+fn llmSystem(content) {
+    return llmMessage("system", content);
+}
+
+// User message
+fn llmUser(content) {
+    return llmMessage("user", content);
+}
+
+// Assistant message
+fn llmAssistant(content) {
+    return llmMessage("assistant", content);
+}
+
+// Chat completion (simulated)
+fn llmChat(messages, options) {
+    _llmRequestCounter = _llmRequestCounter + 1;
+    let requestId = "req_" + _llmRequestCounter;
+    
+    // Simulate API call
+    let response = {};
+    response["id"] = requestId;
+    response["model"] = _llmModel;
+    response["provider"] = _llmProvider;
+    response["created"] = getCurrentTimestamp();
+    
+    // Get last user message
+    let lastUserMsg = "";
+    let i = len(messages) - 1;
+    while (i >= 0) {
+        if (messages[i]["role"] == "user") {
+            lastUserMsg = messages[i]["content"];
+            i = -1; // Break
+        } else {
+            i = i - 1;
+        }
+    }
+    
+    // Simulate response based on input
+    let content = "This is a simulated response from " + _llmModel + " for: " + lastUserMsg;
+    
+    let choice = {};
+    choice["index"] = 0;
+    choice["message"] = llmAssistant(content);
+    choice["finishReason"] = "stop";
+    
+    response["choices"] = [choice];
+    
+    // Usage stats
+    let usage = {};
+    usage["promptTokens"] = len(lastUserMsg) / 4;
+    usage["completionTokens"] = len(content) / 4;
+    usage["totalTokens"] = usage["promptTokens"] + usage["completionTokens"];
+    response["usage"] = usage;
+    
+    // Store in history
+    push(_llmHistory, response);
+    
+    let result = {};
+    result["success"] = true;
+    result["response"] = response;
+    result["content"] = content;
+    return result;
+}
+
+// Simple completion (single message)
+fn llmComplete(prompt, systemPrompt) {
+    let messages = [];
+    
+    if (systemPrompt != null && systemPrompt != "") {
+        push(messages, llmSystem(systemPrompt));
+    }
+    push(messages, llmUser(prompt));
+    
+    return llmChat(messages, null);
+}
+
+// Streaming (placeholder)
+fn llmStreamChat(messages, onChunk) {
+    // Would implement SSE streaming
+    return llmChat(messages, null);
+}
+
+// ============================================
+// EMBEDDINGS
+// ============================================
+
+let _embeddingDim = 1536;
+
+// Generate embedding (simulated)
+fn llmEmbed(text) {
+    // Simulate embedding generation
+    let embedding = [];
+    let i = 0;
+    while (i < _embeddingDim) {
+        // Simple hash-based pseudo-random for consistency
+        let val = ((i * 7 + len(text) * 13) % 200 - 100) / 100;
+        push(embedding, val);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["success"] = true;
+    result["embedding"] = embedding;
+    result["dimensions"] = _embeddingDim;
+    result["model"] = _llmModel;
+    return result;
+}
+
+// Batch embed multiple texts
+fn llmEmbedBatch(texts) {
+    let embeddings = [];
+    let i = 0;
+    while (i < len(texts)) {
+        let emb = llmEmbed(texts[i]);
+        push(embeddings, emb["embedding"]);
+        i = i + 1;
+    }
+    
+    let result = {};
+    result["success"] = true;
+    result["embeddings"] = embeddings;
+    result["count"] = len(texts);
+    return result;
+}
+
+// Cosine similarity between embeddings
+fn llmCosineSimilarity(a, b) {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    
+    let i = 0;
+    while (i < len(a)) {
+        dotProduct = dotProduct + a[i] * b[i];
+        normA = normA + a[i] * a[i];
+        normB = normB + b[i] * b[i];
+        i = i + 1;
+    }
+    
+    // Return dot product normalized (simplified version without sqrt)
+    // For similar embeddings, this ratio will be positive
+    let denominator = normA + normB;
+    if (denominator > 0) {
+        // Normalized dot product scaled
+        return (2 * dotProduct) / denominator;
+    }
+    return 0;
+}
+
+// ============================================
+// FUNCTION CALLING / TOOLS
+// ============================================
+
+let _llmTools = {};
+
+// Define a tool
+fn llmDefineTool(name, description, parameters) {
+    let tool = {};
+    tool["type"] = "function";
+    tool["function"] = {};
+    tool["function"]["name"] = name;
+    tool["function"]["description"] = description;
+    tool["function"]["parameters"] = parameters;
+    
+    _llmTools[name] = tool;
+    
+    return tool;
+}
+
+// Get all tools
+fn llmGetTools() {
+    let tools = [];
+    // Would iterate _llmTools
+    return tools;
+}
+
+// Simulate tool call response
+fn llmCallWithTools(messages, tools) {
+    let result = llmChat(messages, null);
+    
+    // Simulate tool call detection
+    let toolCall = {};
+    toolCall["id"] = "call_" + _llmRequestCounter;
+    toolCall["type"] = "function";
+    toolCall["function"] = {};
+    toolCall["function"]["name"] = "get_weather";
+    toolCall["function"]["arguments"] = "{\"location\": \"London\"}";
+    
+    result["toolCalls"] = [toolCall];
+    
+    return result;
+}
+
+// ============================================
+// PROMPT TEMPLATES
+// ============================================
+
+let _promptTemplates = {};
+
+// Register template
+fn llmRegisterTemplate(name, template) {
+    _promptTemplates[name] = template;
+}
+
+// Apply template
+fn llmApplyTemplate(name, variables) {
+    let template = _promptTemplates[name];
+    
+    if (typeof(template) == "null") {
+        return null;
+    }
+    
+    // Simple variable substitution
+    let result = template;
+    // Would replace {{var}} with values
+    
+    return result;
+}
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+let _lastRequestTime = 0;
+let _requestsThisMinute = 0;
+let _maxRequestsPerMinute = 60;
+
+fn llmSetRateLimit(requestsPerMinute) {
+    _maxRequestsPerMinute = requestsPerMinute;
+}
+
+fn llmCanRequest() {
+    // Simplified rate limiting
+    return _requestsThisMinute < _maxRequestsPerMinute;
+}
+
+fn llmResetRateLimits() {
+    _requestsThisMinute = 0;
+}
+
+// ============================================
+// CONVERSATION MANAGEMENT
+// ============================================
+
+let _conversations = {};
+
+// Create conversation
+fn llmCreateConversation(id) {
+    let conv = {};
+    conv["id"] = id;
+    conv["messages"] = [];
+    conv["created"] = getCurrentTimestamp();
+    
+    _conversations[id] = conv;
+    
+    return conv;
+}
+
+// Add message to conversation
+fn llmAddToConversation(id, message) {
+    if (typeof(_conversations[id]) == "null") {
+        llmCreateConversation(id);
+    }
+    
+    push(_conversations[id]["messages"], message);
+}
+
+// Get conversation
+fn llmGetConversation(id) {
+    return _conversations[id];
+}
+
+// Clear conversation
+fn llmClearConversation(id) {
+    if (typeof(_conversations[id]) != "null") {
+        _conversations[id]["messages"] = [];
+    }
+}
+
+// ============================================
+// UTILITY
+// ============================================
+
+fn getCurrentTimestamp() {
+    return 1736665200;
+}
+
+fn llmVersion() {
+    return "1.0.0";
+}

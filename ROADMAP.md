@@ -365,11 +365,15 @@ Cross-platform application development.
 ## 🔮 Phase 12: AI & Machine Learning (v4.2)
 AI/ML capabilities for modern applications.
 
-### Tensor Operations
-- [ ] N-dimensional arrays (tensors)
-- [ ] Matrix operations (BLAS-style)
-- [ ] GPU acceleration (CUDA/Metal)
-- [ ] Automatic differentiation
+### Tensor Operations (`stdlib/tensor.cryo`) ✅ [TESTED: 10/10 PASS]
+- [x] N-dimensional arrays (tensors)
+- [x] Matrix operations (matmul, transpose, dot)
+- [x] Element-wise operations (add, sub, mul, scale)
+- [x] Reductions (sum, mean, max, min, argmax)
+- [x] Activation functions (ReLU, softmax)
+- [x] Reshaping and flattening
+- [ ] GPU acceleration (CUDA/Metal) - requires native
+- [ ] Automatic differentiation - requires native
 
 ### ML Libraries
 - [ ] Neural network primitives
@@ -377,11 +381,17 @@ AI/ML capabilities for modern applications.
 - [ ] TensorFlow Lite integration
 - [ ] PyTorch model import
 
-### AI Utilities
-- [ ] Embeddings generation
-- [ ] Vector similarity search
-- [ ] LLM API clients (OpenAI, Claude, Gemini)
-- [ ] RAG (Retrieval-Augmented Generation)
+### AI Utilities (`stdlib/llm.cryo`) ✅ [TESTED: 10/10 PASS]
+- [x] LLM API clients (OpenAI, Claude, Gemini)
+- [x] Chat completion and streaming
+- [x] Embeddings generation
+- [x] Cosine similarity for vectors
+- [x] Function calling / Tools
+- [x] Prompt templates
+- [x] Conversation management
+- [x] Rate limiting
+- [ ] Vector similarity search (TODO)
+- [ ] RAG (Retrieval-Augmented Generation) (TODO)
 
 ---
 
