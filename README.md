@@ -7,13 +7,13 @@
 </p>
 
 <p align="center">
-  <strong>Version 3.4.0</strong> | Security & Logging Release
+  <strong>Version 4.0.0</strong> | AI & Cloud Native Release
 </p>
 
 <p align="center">
   <a href="http://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
-  <img src="https://img.shields.io/badge/Cryo-v3.3.0-crimson?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Cryo-v4.0.0-crimson?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/build-passing-brightgreen?style=flat-square" alt="Build Status">
   <img src="https://img.shields.io/badge/platform-win%20%7C%20linux%20%7C%20macos-lightgrey?style=flat-square" alt="Platform">
 </p>
@@ -86,7 +86,7 @@ cargo build --release
 
 # Verify installation
 ./target/release/cryo --version
-# Output: Cryo Native v3.2.1
+# Output: Cryo v4.0.0 - High-Performance Systems Language
 
 # (Optional) Copy to project root
 cp target/release/cryo.exe cryo.exe   # Windows
@@ -349,6 +349,35 @@ fn main() {
 | `postgres_native` | PostgreSQL Wire Protocol v3.0 | ✅ Stable |
 | `mysql_native` | MySQL/MariaDB with SHA1 auth | ✅ Stable |
 | `redis` | Redis RESP protocol via TCP | ✅ Stable |
+| `mongodb` | MongoDB document database | ✅ Stable |
+
+### Cloud Services (NEW in v4.0)
+
+| Module | Description | Test Status |
+|--------|-------------|-------------|
+| `aws` | AWS SDK (SQS, SNS, DynamoDB, Lambda, Secrets) | ✅ 10/10 tests |
+| `gcp` | GCP SDK (Pub/Sub, Firestore, Functions, Storage) | ✅ 10/10 tests |
+| `azure` | Azure SDK (Blob, Service Bus, Cosmos, Functions) | ✅ 10/10 tests |
+| `s3` | S3-compatible storage (AWS, MinIO, Spaces) | ✅ 10/10 tests |
+| `otel` | OpenTelemetry (tracing, spans, metrics) | ✅ 10/10 tests |
+| `grpc` | gRPC client/server with Protocol Buffers | ✅ 10/10 tests |
+
+### AI & Machine Learning (NEW in v4.0)
+
+| Module | Description | Test Status |
+|--------|-------------|-------------|
+| `tensor` | N-dimensional arrays, matrix ops, activations | ✅ 10/10 tests |
+| `llm` | LLM APIs (OpenAI, Claude, Gemini), embeddings | ✅ 10/10 tests |
+
+### Performance (NEW in v4.0)
+
+| Module | Description | Test Status |
+|--------|-------------|-------------|
+| `async_io` | Async I/O and event loop | ✅ 10/10 tests |
+| `simd` | SIMD vector operations | ✅ 10/10 tests |
+| `cache` | LRU cache, TTL cache, memoization | ✅ 10/10 tests |
+| `profiler` | Performance profiling, benchmarking | ✅ 10/10 tests |
+| `reflect` | Runtime type introspection | ✅ 10/10 tests |
 
 ```javascript
 // SQLite example
@@ -606,6 +635,10 @@ Install the Cryo extension from the `lsp/vscode-extension` directory.
 
 | Version | Release | Key Features |
 |---------|---------|--------------|
+| v4.0.0 | 2026-01 | JIT Compilation, Cloud SDKs (AWS/GCP/Azure), AI/ML (Tensor, LLM APIs), OpenTelemetry |
+| v3.6.0 | 2026-01 | S3 storage, Distributed tracing, gRPC support, Reflection API |
+| v3.5.0 | 2026-01 | Security (bcrypt, JWT, OAuth2), Async I/O, Event loop |
+| v3.4.0 | 2026-01 | SIMD operations, Cache, Profiler, Package workspaces |
 | v3.3.0 | 2026-01 | SQLite driver (17 tests), JWT library (6 tests), OAuth2 library (6 tests) |
 | v3.2.1 | 2026-01 | Native mode default, Decorators support, AI agent documentation |
 | v3.0.0 | 2025-12 | LSP, Debugger, Bytecode VM, LLVM compilation |
